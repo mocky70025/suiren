@@ -59,6 +59,22 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// ==================== ユーザー情報 ====================
+
+// ユーザー情報取得（売り手情報取得用）
+app.get('/api/users/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const user = await db.getUser(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'ユーザーが見つかりません' });
+        }
+        res.json({ id: user.id, username: user.username });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ==================== ポイント管理 ====================
 
 // ポイントデータ取得
@@ -98,6 +114,11 @@ app.get('/api/users/:userId/payments', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// 運営用ページ
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'admin.html'));
 });
 
 // ルート（フロントエンドを配信）

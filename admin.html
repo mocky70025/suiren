@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>すいれん - 運営用QRコード生成</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>すいれん</h1>
+            <p class="subtitle">運営用 - QRコード生成</p>
+        </header>
+
+        <main>
+            <!-- 認証画面 -->
+            <div id="authScreen" class="login-screen">
+                <section class="login-section">
+                    <h2>運営認証</h2>
+                    <div class="login-form">
+                        <label for="adminPassword">パスワード</label>
+                        <input type="password" id="adminPassword" placeholder="パスワードを入力" required>
+                        
+                        <button id="adminLoginButton" class="login-button">ログイン</button>
+                    </div>
+                    <div id="adminError" class="error-message" style="display: none;"></div>
+                </section>
+            </div>
+
+            <!-- QRコード生成画面 -->
+            <div id="adminScreen" style="display: none;">
+                <section class="admin-qr-section">
+                    <h2>売り手QRコード生成</h2>
+                    <div class="seller-select-form">
+                        <label for="sellerSelect">売り手を選択</label>
+                        <select id="sellerSelect" class="seller-select">
+                            <option value="">売り手を選択してください</option>
+                        </select>
+                        
+                        <button id="generateSellerQRButton" class="generate-button">
+                            QRコードを生成
+                        </button>
+                    </div>
+
+                    <!-- QRコード表示エリア -->
+                    <div id="qrDisplayArea" class="qr-display-area" style="display: none;">
+                        <div class="qr-container">
+                            <canvas id="qrCanvas"></canvas>
+                            <p class="qr-seller-text">売り手: <span id="qrSellerName"></span></p>
+                            <p class="qr-instruction-text">このQRコードをスキャンして支払い</p>
+                        </div>
+                        <div class="qr-actions">
+                            <button id="printQRButton" class="print-button">
+                                印刷する
+                            </button>
+                            <button id="downloadQRButton" class="download-button">
+                                画像をダウンロード
+                            </button>
+                            <button id="closeQRButton" class="close-qr-button">
+                                閉じる
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="admin-actions">
+                    <button id="logoutAdminButton" class="logout-button">ログアウト</button>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
+

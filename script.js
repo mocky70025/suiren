@@ -438,52 +438,75 @@ class PayPayPayment {
     }
 }
 
-// 売り手用QRコード生成
-class SellerQRGenerator {
-    constructor() {
-        this.currentAmount = 0;
+
+// 支払いページ管理（QRコードスキャン後の処理）
+class PaymentPageManager {
+    constructor(pointsCard) {
+        this.pointsCard = pointsCard;
+        this.sellerId = null;
         this.init();
     }
 
     init() {
-        // QRコード生成ボタン
-        const generateBtn = document.getElementById('generateQRButton');
-        if (generateBtn) {
-            generateBtn.addEventListener('click', () => this.generateQR());
+        // URLパラメータをチェック
+        const urlParams = new URLSearchParams(window.location.search);
+        const sellerId = urlParams.get('sellerId');
+
+        if (sellerId) {
+            this.sellerId = parseInt(sellerId);
+            this.showPaymentPage();
         }
 
-        // 印刷ボタン
-        const printBtn = document.getElementById('printQRButton');
-        if (printBtn) {
-            printBtn.addEventListener('click', () => this.printQR());
+        // 支払いボタン
+        const payButton = document.getElementById('payToSellerButton');
+        if (payButton) {
+            payButton.addEventListener('click', () => this.processPayment());
         }
 
-        // ダウンロードボタン
-        const downloadBtn = document.getElementById('downloadQRButton');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => this.downloadQR());
-        }
-
-        // 閉じるボタン
-        const closeBtn = document.getElementById('closeQRButton');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeQR());
-        }
-
-        // EnterキーでQRコード生成
-        const amountInput = document.getElementById('sellerAmount');
+        // Enterキーで支払い
+        const amountInput = document.getElementById('paymentToSellerAmount');
         if (amountInput) {
             amountInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    this.generateQR();
+                    this.processPayment();
                 }
             });
         }
     }
 
-    // QRコードを生成
-    async generateQR() {
-        const amountInput = document.getElementById('sellerAmount');
+    async showPaymentPage() {
+        // メイン画面を非表示
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainScreen').style.display = 'none';
+        
+        // 支払いページを表示
+        const paymentPage = document.getElementById('paymentPage');
+        if (paymentPage) {
+            paymentPage.style.display = 'block';
+        }
+
+        // 売り手情報を取得
+        try {
+            const sellerInfo = await apiCall(`/users/${this.sellerId}`);
+            const sellerNameEl = document.getElementById('paymentSellerName');
+            if (sellerNameEl) {
+                sellerNameEl.textContent = sellerInfo.username;
+            }
+        } catch (error) {
+            alert('売り手情報の取得に失敗しました');
+            console.error(error);
+        }
+    }
+
+    async processPayment() {
+        if (!currentUser) {
+            alert('ログインが必要です。先にログインしてください。');
+            // ログイン画面にリダイレクト
+            window.location.href = window.location.origin;
+            return;
+        }
+
+        const amountInput = document.getElementById('paymentToSellerAmount');
         const amount = parseInt(amountInput.value);
 
         if (!amount || amount <= 0) {
@@ -491,75 +514,17 @@ class SellerQRGenerator {
             return;
         }
 
-        this.currentAmount = amount;
-        const qrDisplayArea = document.getElementById('qrDisplayArea');
-        const qrCanvas = document.getElementById('qrCanvas');
-        const qrAmountText = document.getElementById('qrAmountText');
-
-        if (!qrDisplayArea || !qrCanvas || !qrAmountText) {
-            return;
-        }
-
-        // QRコードに含めるデータ
-        const qrData = `PAYPAY:${amount}円:${Date.now()}`;
-
+        // 支払いを記録（買い手のポイントカードに追加）
         try {
-            // QRコードを生成
-            await QRCode.toCanvas(qrCanvas, qrData, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            });
-
-            // 金額表示を更新
-            qrAmountText.textContent = amount.toLocaleString();
-
-            // 表示エリアを表示
-            qrDisplayArea.style.display = 'block';
-
-            // スクロールして表示
-            qrDisplayArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            await this.pointsCard.addPayment(amount);
+            alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
+            
+            // メイン画面に戻る
+            window.location.href = window.location.origin;
         } catch (error) {
-            console.error('QRコード生成エラー:', error);
-            alert('QRコードの生成に失敗しました');
+            alert('支払いの記録に失敗しました');
+            console.error(error);
         }
-    }
-
-    // QRコードを印刷
-    printQR() {
-        window.print();
-    }
-
-    // QRコードを画像としてダウンロード
-    downloadQR() {
-        const qrCanvas = document.getElementById('qrCanvas');
-        if (!qrCanvas) {
-            return;
-        }
-
-        // Canvasを画像に変換
-        qrCanvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `paypay-qr-${this.currentAmount}円-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }, 'image/png');
-    }
-
-    // QRコード表示を閉じる
-    closeQR() {
-        const qrDisplayArea = document.getElementById('qrDisplayArea');
-        if (qrDisplayArea) {
-            qrDisplayArea.style.display = 'none';
-        }
-        this.currentAmount = 0;
     }
 }
 
@@ -579,8 +544,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // PayPay決済の初期化
     const paypayPayment = new PayPayPayment(window.pointsCard);
 
-    // 売り手用QRコード生成の初期化
-    const sellerQR = new SellerQRGenerator();
+    // 支払いページ管理の初期化
+    const paymentPageManager = new PaymentPageManager(window.pointsCard);
 
     // Enterキーで支払いモーダルを開く
     const amountInput = document.getElementById('paymentAmount');

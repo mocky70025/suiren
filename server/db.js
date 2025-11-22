@@ -161,6 +161,23 @@ function addPayment(userId, amount) {
     });
 }
 
+// ユーザー情報取得
+function getUser(userId) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            'SELECT id, username FROM users WHERE id = ?',
+            [userId],
+            (err, user) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(user);
+                }
+            }
+        );
+    });
+}
+
 // 支払い履歴取得
 function getPayments(userId, limit = 50) {
     return new Promise((resolve, reject) => {
@@ -191,6 +208,7 @@ module.exports = {
     init,
     createUser,
     authenticateUser,
+    getUser,
     getUserPoints,
     addPayment,
     getPayments
