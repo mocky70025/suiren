@@ -43,7 +43,7 @@ async function createRichMenu() {
                 action: {
                     type: 'uri',
                     label: '支払い',
-                    uri: `${APP_URL}/?action=payment`
+                    uri: `${APP_URL}/?line_user_id={userId}&action=payment`
                 }
             }
         ]
@@ -77,6 +77,13 @@ async function createRichMenu() {
 async function uploadRichMenuImage(richMenuId, imagePath) {
     try {
         const fs = require('fs');
+        
+        if (!imagePath || !fs.existsSync(imagePath)) {
+            throw new Error(`リッチメニュー画像が見つかりません: ${imagePath || '未指定'}\n` +
+                'リッチメニューを表示するには、2500x1686ピクセルのPNG画像が必要です。\n' +
+                'assets/richmenu_image.png に画像を配置してください。');
+        }
+        
         const imageBuffer = fs.readFileSync(imagePath);
 
         const response = await fetch(`https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`, {
