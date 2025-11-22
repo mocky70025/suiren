@@ -403,6 +403,78 @@ function getPendingReceipts() {
     });
 }
 
+// すべての受け取り記録を取得（処理済みも含む）
+function getAllReceipts(limit = 100) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `SELECT 
+                r.id,
+                r.amount,
+                r.memo,
+                r.created_at,
+                r.processed_at,
+                r.status,
+                s.username as seller_name,
+                b.username as buyer_name
+             FROM seller_receipts r
+             LEFT JOIN users s ON r.seller_id = s.id
+             LEFT JOIN users b ON r.buyer_id = b.id
+             ORDER BY r.created_at DESC
+             LIMIT ?`,
+            [limit],
+            (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(row => ({
+                        id: row.id,
+                        amount: row.amount,
+                        memo: row.memo || '',
+                        sellerName: row.seller_name,
+                        buyerName: row.buyer_name || '不明',
+                        date: new Date(row.created_at).toLocaleString('ja-JP'),
+                        processedDate: row.processed_at ? new Date(row.processed_at).toLocaleString('ja-JP') : null,
+                        status: row.status
+                    })));
+                }
+            }
+        );
+    });
+}
+
+// すべての支払い記録を取得
+function getAllPayments(limit = 100) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `SELECT 
+                p.id,
+                p.amount,
+                p.created_at,
+                u.username as buyer_name,
+                s.username as seller_name
+             FROM payments p
+             LEFT JOIN users u ON p.user_id = u.id
+             LEFT JOIN users s ON p.seller_id = s.id
+             ORDER BY p.created_at DESC
+             LIMIT ?`,
+            [limit],
+            (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(row => ({
+                        id: row.id,
+                        amount: row.amount,
+                        buyerName: row.buyer_name,
+                        sellerName: row.seller_name || 'なし',
+                        date: new Date(row.created_at).toLocaleString('ja-JP')
+                    })));
+                }
+            }
+        );
+    });
+}
+
 // 受け取り記録を処理（買い手のポイントカードに反映）
 function processReceipt(receiptId, buyerId) {
     return new Promise((resolve, reject) => {
@@ -471,6 +543,8 @@ module.exports = {
     getSellerTransactions,
     addSellerReceipt,
     getPendingReceipts,
+    getAllReceipts,
+    getAllPayments,
     processReceipt
 };
 

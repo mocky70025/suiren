@@ -105,6 +105,27 @@
                     </div>
                 </section>
 
+                <!-- 全データ表示セクション -->
+                <section class="all-data-section">
+                    <h2>全データ一覧</h2>
+                    <div class="data-tabs">
+                        <button class="tab-button active" onclick="showTab('receipts')">受け取り記録（全件）</button>
+                        <button class="tab-button" onclick="showTab('payments')">支払い記録（全件）</button>
+                    </div>
+                    
+                    <div id="receiptsTab" class="tab-content active">
+                        <div id="allReceiptsArea">
+                            <p class="loading-text">読み込み中...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="paymentsTab" class="tab-content" style="display: none;">
+                        <div id="allPaymentsArea">
+                            <p class="loading-text">読み込み中...</p>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="admin-actions">
                     <button id="logoutAdminButton" class="logout-button">ログアウト</button>
                 </section>

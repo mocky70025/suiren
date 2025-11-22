@@ -318,6 +318,26 @@ app.post('/api/admin/receipts/:receiptId/process', async (req, res) => {
     }
 });
 
+// すべての受け取り記録を取得（運営用）
+app.get('/api/admin/all-receipts', async (req, res) => {
+    try {
+        const receipts = await db.getAllReceipts();
+        res.json(receipts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// すべての支払い記録を取得（運営用）
+app.get('/api/admin/all-payments', async (req, res) => {
+    try {
+        const payments = await db.getAllPayments();
+        res.json(payments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 運営用ページ
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'admin.html'));

@@ -16,8 +16,12 @@ function checkAuth() {
         isAuthenticated = true;
         showAdminScreen();
         loadPendingReceipts();
+        loadAllReceipts(); // 全データも読み込む
         // 定期的に更新（5分ごと）
-        setInterval(loadPendingReceipts, 5 * 60 * 1000);
+        setInterval(() => {
+            loadPendingReceipts();
+            loadAllReceipts();
+        }, 5 * 60 * 1000);
     } else {
         showAuthScreen();
     }
@@ -45,8 +49,12 @@ function login() {
         sessionStorage.setItem('adminAuth', 'true');
         showAdminScreen();
         loadPendingReceipts();
+        loadAllReceipts(); // 全データも読み込む
         // 定期的に更新（5分ごと）
-        setInterval(loadPendingReceipts, 5 * 60 * 1000);
+        setInterval(() => {
+            loadPendingReceipts();
+            loadAllReceipts();
+        }, 5 * 60 * 1000);
         errorDiv.style.display = 'none';
     } else {
         errorDiv.textContent = 'パスワードが正しくありません';
@@ -404,9 +412,132 @@ async function processReceipt(receiptId) {
 
         alert('ポイントカードに反映しました！');
         loadPendingReceipts();
+        loadAllReceipts(); // 全データも更新
     } catch (error) {
         alert('処理に失敗しました: ' + error.message);
         console.error(error);
+    }
+}
+
+// タブ切り替え
+function showTab(tabName) {
+    // すべてのタブコンテンツを非表示
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    
+    // すべてのタブボタンからactiveクラスを削除
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // 選択されたタブを表示
+    if (tabName === 'receipts') {
+        document.getElementById('receiptsTab').style.display = 'block';
+        document.querySelectorAll('.tab-button')[0].classList.add('active');
+        loadAllReceipts();
+    } else if (tabName === 'payments') {
+        document.getElementById('paymentsTab').style.display = 'block';
+        document.querySelectorAll('.tab-button')[1].classList.add('active');
+        loadAllPayments();
+    }
+}
+
+// すべての受け取り記録を読み込む
+async function loadAllReceipts() {
+    try {
+        const receipts = await fetch(`${API_BASE}/admin/all-receipts`).then(r => r.json());
+        const area = document.getElementById('allReceiptsArea');
+        
+        if (!area) return;
+
+        if (receipts.length === 0) {
+            area.innerHTML = '<p class="no-receipts">受け取り記録がありません</p>';
+            return;
+        }
+
+        area.innerHTML = `
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>売り手</th>
+                            <th>買い手</th>
+                            <th>金額</th>
+                            <th>メモ</th>
+                            <th>ステータス</th>
+                            <th>処理日時</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${receipts.map(r => `
+                            <tr class="${r.status === 'PENDING' ? 'pending-row' : ''}">
+                                <td>${r.date}</td>
+                                <td>${r.sellerName}</td>
+                                <td>${r.buyerName}</td>
+                                <td class="amount-cell">${r.amount.toLocaleString()}円</td>
+                                <td>${r.memo || '-'}</td>
+                                <td><span class="status-badge ${r.status === 'PENDING' ? 'pending' : 'processed'}">${r.status === 'PENDING' ? '未処理' : '処理済み'}</span></td>
+                                <td>${r.processedDate || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        console.error('受け取り記録の読み込みエラー:', error);
+        const area = document.getElementById('allReceiptsArea');
+        if (area) {
+            area.innerHTML = '<p class="error-text">受け取り記録の読み込みに失敗しました</p>';
+        }
+    }
+}
+
+// すべての支払い記録を読み込む
+async function loadAllPayments() {
+    try {
+        const payments = await fetch(`${API_BASE}/admin/all-payments`).then(r => r.json());
+        const area = document.getElementById('allPaymentsArea');
+        
+        if (!area) return;
+
+        if (payments.length === 0) {
+            area.innerHTML = '<p class="no-receipts">支払い記録がありません</p>';
+            return;
+        }
+
+        area.innerHTML = `
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>買い手</th>
+                            <th>売り手</th>
+                            <th>金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${payments.map(p => `
+                            <tr>
+                                <td>${p.date}</td>
+                                <td>${p.buyerName}</td>
+                                <td>${p.sellerName}</td>
+                                <td class="amount-cell">${p.amount.toLocaleString()}円</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        console.error('支払い記録の読み込みエラー:', error);
+        const area = document.getElementById('allPaymentsArea');
+        if (area) {
+            area.innerHTML = '<p class="error-text">支払い記録の読み込みに失敗しました</p>';
+        }
     }
 }
 
