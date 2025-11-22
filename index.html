@@ -28,6 +28,14 @@
                         
                         <button id="loginButton" class="login-button">ログイン</button>
                         <button id="showRegisterButton" class="register-link-button">新規登録</button>
+                        
+                        <div class="line-login-divider">
+                            <span>または</span>
+                        </div>
+                        
+                        <a href="/api/line/login" class="line-login-button">
+                            <img src="https://developers.line.biz/media/line-login/line-login-button/ja/btn/desktop/2x/btn_login_base.png" alt="LINEでログイン" style="height: 40px;">
+                        </a>
                     </div>
                     <div id="loginError" class="error-message" style="display: none;"></div>
                 </section>
@@ -68,15 +76,19 @@
                         <label for="receiptAmount">受け取った金額（円）</label>
                         <input type="number" id="receiptAmount" min="1" placeholder="金額を入力" required>
                         
+                        <label for="receiptBuyerName">買い手のユーザー名</label>
+                        <input type="text" id="receiptBuyerName" placeholder="例: 田中" required>
+                        <p class="receipt-field-note">※ 誰から受け取ったかを入力してください</p>
+                        
                         <label for="receiptMemo">メモ（任意）</label>
-                        <input type="text" id="receiptMemo" placeholder="例: 田中さんから" maxlength="50">
+                        <input type="text" id="receiptMemo" placeholder="例: 商品名など" maxlength="50">
                         
                         <button id="submitReceiptButton" class="submit-receipt-button">
                             記録する
                         </button>
                     </div>
                     <p class="receipt-note">
-                        ※ 記録した金額は、運営が確認後にポイントカードに反映されます
+                        ※ 記録した金額は、運営が確認後に買い手のポイントカードに反映されます
                     </p>
                 </section>
 
@@ -119,18 +131,14 @@
                         <h2>PayPayで支払い</h2>
                         <div class="paypay-info">
                             <p class="amount-display">支払い金額: <span id="modalAmount">0</span>円</p>
-                            <div class="paypay-qr">
-                                <h3 class="payment-method-title">QRコードで支払う（推奨）</h3>
-                                <p class="qr-instruction">PayPayアプリでQRコードをスキャンしてください</p>
-                                <div class="qr-placeholder" id="qrCode">
-                                    <p>QRコードを読み込み中...</p>
-                                </div>
-                                <div class="payment-divider">
-                                    <span>または</span>
-                                </div>
-                                <h3 class="payment-method-title-sub">リンクで支払う</h3>
+                            <div class="paypay-instructions">
+                                <p>1. 下のボタンをクリックしてPayPayアプリを開く</p>
+                                <p>2. PayPayアプリで金額を入力して送金を完了</p>
+                                <p>3. 送金完了後、「支払い完了」をクリックして記録</p>
+                            </div>
+                            <div class="paypay-link-container">
                                 <a href="#" id="paypayLink" class="paypay-link" target="_blank">
-                                    PayPayで支払う
+                                    PayPayアプリを開く
                                 </a>
                             </div>
                             <div class="payment-actions">
@@ -146,41 +154,6 @@
                 </div>
             </section>
 
-            </div>
-
-            <!-- 買い手用支払いページ（QRコードスキャン後） -->
-            <div id="paymentPage" style="display: none;">
-                <section class="payment-to-seller-section">
-                    <h2>支払い</h2>
-                    <div class="seller-info-display">
-                        <p class="seller-label">売り手:</p>
-                        <p class="seller-name" id="paymentSellerName">-</p>
-                        <p class="seller-paypay-id" id="paymentPayPayId" style="display: none;">
-                            PayPay ID: <span id="paypayIdValue"></span>
-                        </p>
-                    </div>
-                    <div class="payment-form">
-                        <label for="paymentToSellerAmount">支払い金額（円）</label>
-                        <input type="number" id="paymentToSellerAmount" min="1" placeholder="金額を入力" required>
-                        
-                        <div class="payment-instructions">
-                            <p>1. 金額を入力</p>
-                            <p>2. 「PayPayで支払う」をクリックしてPayPayアプリを開く</p>
-                            <p>3. PayPayアプリで送金を完了</p>
-                            <p>4. 送金完了後、「支払い完了」をクリックして記録</p>
-                        </div>
-                        
-                        <button id="payToSellerButton" class="pay-button">
-                            PayPayで支払う
-                        </button>
-                        <button id="confirmPaymentToSeller" class="confirm-button" style="display: none;">
-                            支払い完了
-                        </button>
-                    </div>
-                    <div class="payment-note">
-                        <p>※ ログインが必要です。ログインしていない場合は、先にログインしてください。</p>
-                    </div>
-                </section>
             </div>
         </main>
     </div>

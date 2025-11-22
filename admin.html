@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>すいれん - 運営用QRコード生成</title>
+    <title>すいれん - 運営用ページ</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>すいれん</h1>
-            <p class="subtitle">運営用 - QRコード生成</p>
+            <p class="subtitle">運営用ページ</p>
         </header>
 
         <main>
@@ -29,102 +28,63 @@
                 </section>
             </div>
 
-            <!-- QRコード生成画面 -->
+            <!-- 運営画面 -->
             <div id="adminScreen" style="display: none;">
-                <section class="admin-qr-section">
-                    <h2>売り手QRコード生成</h2>
-                    <div class="seller-select-form">
-                        <label for="sellerNameInput">売り手のユーザー名</label>
-                        <input type="text" id="sellerNameInput" class="seller-name-input" placeholder="売り手のユーザー名を入力">
-                        
-                        <label for="sellerPayPayId">売り手のPayPay ID（電話番号またはPayPay ID）</label>
-                        <input type="text" id="sellerPayPayId" class="seller-name-input" placeholder="例: 09012345678 または mocky70025">
-                        <p class="paypay-id-note">
-                            ※ PayPayアプリで確認: 「マイページ」→「PayPay ID」<br>
-                            ※ 電話番号（09012345678）またはPayPay ID（mocky70025）のどちらでもOK<br>
-                            ※ @マークは自動で除去されます
-                        </p>
-                        
-                        <button id="generateSellerQRButton" class="generate-button">
-                            QRコードを生成
+                <!-- メインメニュー -->
+                <section class="admin-main-menu">
+                    <h2>メインメニュー</h2>
+                    <div class="admin-menu-buttons">
+                        <button id="pointsPageButton" class="admin-menu-button">
+                            <span class="button-icon">🎁</span>
+                            <span class="button-text">ポイントをつける</span>
+                            <span class="button-description">未処理の受け取り記録を処理してポイントを付与</span>
+                        </button>
+                        <button id="salesPageButton" class="admin-menu-button">
+                            <span class="button-icon">📊</span>
+                            <span class="button-text">売り上げを確認</span>
+                            <span class="button-description">すべての取引記録と売り上げを確認</span>
                         </button>
                     </div>
-
-                    <!-- QRコード表示エリア -->
-                    <div id="qrDisplayArea" class="qr-display-area" style="display: none;">
-                        <div class="qr-container">
-                            <canvas id="qrCanvas"></canvas>
-                            <p class="qr-seller-text">売り手: <span id="qrSellerName"></span></p>
-                            <p class="qr-instruction-text">このQRコードをスキャンして支払い</p>
-                        </div>
-                        <div class="qr-actions">
-                            <button id="printQRButton" class="print-button">
-                                印刷する
-                            </button>
-                            <button id="downloadQRButton" class="download-button">
-                                画像をダウンロード
-                            </button>
-                            <button id="closeQRButton" class="close-qr-button">
-                                閉じる
-                            </button>
-                        </div>
-                    </div>
                 </section>
 
-                <!-- 売り手情報表示セクション -->
-                <section class="seller-info-section-admin">
-                    <h2>売り手情報</h2>
-                    <div id="sellerInfoArea" style="display: none;">
-                        <div class="seller-stats">
-                            <div class="stat-item">
-                                <p class="stat-label">累計入金金額</p>
-                                <p class="stat-value" id="totalEarnings">0円</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="stat-label">取引回数</p>
-                                <p class="stat-value" id="transactionCount">0回</p>
-                            </div>
+                <!-- ポイント付与ページ -->
+                <div id="pointsPage" style="display: none;">
+                    <section class="pending-receipts-section">
+                        <div class="page-header">
+                            <button id="backToMainButton" class="back-button">← メインメニューに戻る</button>
+                            <h2>未処理の受け取り記録</h2>
                         </div>
-                        <div class="transaction-history">
-                            <h3>取引履歴</h3>
-                            <ul id="transactionList" class="transaction-list">
-                                <li class="no-history">まだ取引履歴がありません</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div id="noSellerSelected" class="no-seller-message">
-                        売り手を選択すると、累計入金金額と取引履歴が表示されます
-                    </div>
-                </section>
-
-                <!-- 未処理の受け取り記録セクション -->
-                <section class="pending-receipts-section">
-                    <h2>未処理の受け取り記録</h2>
-                    <div id="pendingReceiptsArea">
-                        <p class="loading-text">読み込み中...</p>
-                    </div>
-                </section>
-
-                <!-- 全データ表示セクション -->
-                <section class="all-data-section">
-                    <h2>全データ一覧</h2>
-                    <div class="data-tabs">
-                        <button class="tab-button active" onclick="showTab('receipts')">受け取り記録（全件）</button>
-                        <button class="tab-button" onclick="showTab('payments')">支払い記録（全件）</button>
-                    </div>
-                    
-                    <div id="receiptsTab" class="tab-content active">
-                        <div id="allReceiptsArea">
+                        <div id="pendingReceiptsArea">
                             <p class="loading-text">読み込み中...</p>
                         </div>
-                    </div>
-                    
-                    <div id="paymentsTab" class="tab-content" style="display: none;">
-                        <div id="allPaymentsArea">
-                            <p class="loading-text">読み込み中...</p>
+                    </section>
+                </div>
+
+                <!-- 売り上げ確認ページ -->
+                <div id="salesPage" style="display: none;">
+                    <section class="all-data-section">
+                        <div class="page-header">
+                            <button id="backToMainButton2" class="back-button">← メインメニューに戻る</button>
+                            <h2>売り上げ・取引記録</h2>
                         </div>
-                    </div>
-                </section>
+                        <div class="data-tabs">
+                            <button class="tab-button active" onclick="showTab('receipts')">受け取り記録（全件）</button>
+                            <button class="tab-button" onclick="showTab('payments')">支払い記録（全件）</button>
+                        </div>
+                        
+                        <div id="receiptsTab" class="tab-content active">
+                            <div id="allReceiptsArea">
+                                <p class="loading-text">読み込み中...</p>
+                            </div>
+                        </div>
+                        
+                        <div id="paymentsTab" class="tab-content" style="display: none;">
+                            <div id="allPaymentsArea">
+                                <p class="loading-text">読み込み中...</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
 
                 <section class="admin-actions">
                     <button id="logoutAdminButton" class="logout-button">ログアウト</button>
@@ -136,4 +96,3 @@
     <script src="admin.js"></script>
 </body>
 </html>
-

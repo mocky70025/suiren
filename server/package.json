@@ -16,7 +16,8 @@
     "sqlite3": "^5.1.6",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "@line/bot-sdk": "^9.3.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

@@ -96,6 +96,53 @@ section {
     border-color: #667eea;
 }
 
+.line-login-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.line-login-divider::before,
+.line-login-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #ddd;
+}
+
+.line-login-divider::before {
+    left: 0;
+}
+
+.line-login-divider::after {
+    right: 0;
+}
+
+.line-login-divider span {
+    background: white;
+    padding: 0 15px;
+    color: #999;
+    font-size: 0.9em;
+}
+
+.line-login-button {
+    display: block;
+    text-align: center;
+    margin: 15px 0;
+    transition: opacity 0.3s;
+}
+
+.line-login-button:hover {
+    opacity: 0.8;
+}
+
+.line-login-button img {
+    max-width: 200px;
+    height: auto;
+}
+
 .login-button,
 .register-button {
     padding: 15px;
@@ -830,6 +877,20 @@ section {
     color: white;
 }
 
+.pending-receipts-note {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.pending-receipts-note p {
+    margin: 5px 0;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
 .receipt-item {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
@@ -855,10 +916,15 @@ section {
 }
 
 .receipt-seller,
+.receipt-buyer,
 .receipt-date {
     font-size: 0.9em;
     opacity: 0.9;
     margin: 5px 0;
+}
+
+.receipt-buyer {
+    font-weight: bold;
 }
 
 .receipt-memo {
@@ -1106,6 +1172,67 @@ section {
     background: #f57c00;
 }
 
+/* リッチメニュー管理セクション */
+.richmenu-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.richmenu-section h2 {
+    margin-bottom: 20px;
+    color: white;
+}
+
+.richmenu-info {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.richmenu-info p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+.richmenu-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.richmenu-status {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.richmenu-status .success-text {
+    color: #4caf50;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.richmenu-status .error-text {
+    color: #f44336;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.richmenu-status .info-text {
+    color: white;
+    margin: 5px 0;
+}
+
+.richmenu-info-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9em;
+    margin: 5px 0;
+}
+
 /* レスポンシブ */
 @media (max-width: 600px) {
     header h1 {
@@ -1187,5 +1314,94 @@ section {
     font-size: 0.9em;
     color: #666;
     text-align: center;
+}
+
+.receipt-field-note {
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #666;
+    font-style: italic;
+}
+
+/* Admin Main Menu */
+.admin-main-menu {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.admin-main-menu h2 {
+    color: white;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.admin-menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-menu-button {
+    background: white;
+    color: #333;
+    border: none;
+    padding: 30px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.admin-menu-button:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.admin-menu-button .button-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.admin-menu-button .button-text {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.admin-menu-button .button-description {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.back-button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s;
+}
+
+.back-button:hover {
+    background: #5568d3;
+}
+
+.page-header h2 {
+    margin: 0;
 }
 

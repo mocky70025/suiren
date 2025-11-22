@@ -32,6 +32,32 @@ class AuthManager {
     }
 
     init() {
+        // LINEログインコールバック処理
+        const urlParams = new URLSearchParams(window.location.search);
+        const lineLoginSuccess = urlParams.get('line_login_success');
+        const userId = urlParams.get('userId');
+        const username = urlParams.get('username');
+        const lineUserId = urlParams.get('line_user_id');
+        
+        if (lineLoginSuccess === 'true' && userId && username) {
+            // LINEログイン成功
+            currentUser = {
+                userId: parseInt(userId),
+                username: decodeURIComponent(username)
+            };
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            // URLパラメータを削除
+            window.history.replaceState({}, document.title, window.location.pathname);
+            this.showMainScreen();
+            return;
+        }
+        
+        // LINEユーザーIDで自動ログイン（LINE公式アカウントからアクセスした場合）
+        if (lineUserId) {
+            this.loginWithLineUserId(lineUserId);
+            return;
+        }
+        
         // ログイン状態を確認
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
@@ -43,6 +69,32 @@ class AuthManager {
 
         // イベントリスナー設定
         this.setupEventListeners();
+    }
+    
+    // LINEユーザーIDで自動ログイン
+    async loginWithLineUserId(lineUserId) {
+        try {
+            const response = await apiCall('/line/auto-login', {
+                method: 'POST',
+                body: JSON.stringify({ lineUserId })
+            });
+            
+            if (response.success) {
+                currentUser = {
+                    userId: response.userId,
+                    username: response.username
+                };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                // URLパラメータを削除
+                window.history.replaceState({}, document.title, window.location.pathname);
+                this.showMainScreen();
+            } else {
+                this.showLoginScreen();
+            }
+        } catch (error) {
+            console.error('LINE自動ログインエラー:', error);
+            this.showLoginScreen();
+        }
     }
 
     setupEventListeners() {
@@ -399,30 +451,14 @@ class PayPayPayment {
         }
     }
 
-    // PayPayリンクを生成（個人送金方式）
+    // PayPayリンクを生成
     generatePayPayLink(amount) {
         const paypayLink = document.getElementById('paypayLink');
-        const qrCode = document.getElementById('qrCode');
 
-        // 個人送金方式では、QRコードは表示しない（売り手への支払い時のみQRコードを使用）
-        // 通常の支払いでは、手動で「支払い完了」をクリックする方式
-        
-        if (qrCode) {
-            qrCode.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <p style="margin-bottom: 10px; font-size: 1.1em; font-weight: bold;">通常の支払い</p>
-                    <p style="font-size: 0.9em; color: #666;">
-                        PayPayアプリで支払いを完了してください<br>
-                        支払い完了後、「支払い完了」ボタンをクリック
-                    </p>
-                </div>
-            `;
-        }
-
-        // PayPayアプリを開くリンク（金額を含む）
+        // PayPayアプリを開くリンク（金額は含めない - アプリで入力する）
         if (paypayLink) {
-            paypayLink.href = `paypay://payment?amount=${amount}`;
-            paypayLink.textContent = 'PayPayで支払う';
+            paypayLink.href = `paypay://payment`;
+            paypayLink.textContent = 'PayPayアプリを開く';
             paypayLink.style.display = 'inline-block';
         }
     }
@@ -462,150 +498,6 @@ class PayPayPayment {
 }
 
 
-// 支払いページ管理（QRコードスキャン後の処理）
-class PaymentPageManager {
-    constructor(pointsCard) {
-        this.pointsCard = pointsCard;
-        this.sellerId = null;
-        this.init();
-    }
-
-    init() {
-        // URLパラメータをチェック
-        const urlParams = new URLSearchParams(window.location.search);
-        const sellerId = urlParams.get('sellerId');
-
-        if (sellerId) {
-            this.sellerId = parseInt(sellerId);
-            this.showPaymentPage();
-        }
-
-        // 支払いボタン
-        const payButton = document.getElementById('payToSellerButton');
-        if (payButton) {
-            payButton.addEventListener('click', () => this.processPayment());
-        }
-
-        // Enterキーで支払い
-        const amountInput = document.getElementById('paymentToSellerAmount');
-        if (amountInput) {
-            amountInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.processPayment();
-                }
-            });
-        }
-    }
-
-    async showPaymentPage() {
-        // メイン画面を非表示
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainScreen').style.display = 'none';
-        
-        // 支払いページを表示
-        const paymentPage = document.getElementById('paymentPage');
-        if (paymentPage) {
-            paymentPage.style.display = 'block';
-        }
-
-        // 売り手情報を取得
-        try {
-            const sellerInfo = await apiCall(`/users/${this.sellerId}`);
-            const sellerNameEl = document.getElementById('paymentSellerName');
-            if (sellerNameEl) {
-                sellerNameEl.textContent = sellerInfo.username;
-            }
-            
-            // PayPay IDが設定されている場合は表示
-            if (sellerInfo.paypay_id) {
-                const paypayInfoEl = document.getElementById('paymentPayPayId');
-                const paypayIdValueEl = document.getElementById('paypayIdValue');
-                if (paypayInfoEl && paypayIdValueEl) {
-                    paypayIdValueEl.textContent = sellerInfo.paypay_id;
-                    paypayInfoEl.style.display = 'block';
-                }
-            }
-        } catch (error) {
-            alert('売り手情報の取得に失敗しました');
-            console.error(error);
-        }
-    }
-
-    async processPayment() {
-        if (!currentUser) {
-            alert('ログインが必要です。先にログインしてください。');
-            // ログイン画面にリダイレクト
-            window.location.href = window.location.origin;
-            return;
-        }
-
-        const amountInput = document.getElementById('paymentToSellerAmount');
-        const amount = parseInt(amountInput.value);
-
-        if (!amount || amount <= 0) {
-            alert('正しい金額を入力してください');
-            return;
-        }
-
-        // 売り手情報を取得
-        try {
-            const sellerInfo = await apiCall(`/users/${this.sellerId}`);
-            
-            if (!sellerInfo.paypay_id) {
-                alert('売り手のPayPay IDが設定されていません。運営に連絡してください。');
-                return;
-            }
-
-            // PayPay個人送金用のURLを生成（金額を含める）
-            let paypayUrl;
-            // 電話番号形式（09012345678など）かチェック
-            if (sellerInfo.paypay_id.match(/^0\d{9,10}$/)) {
-                // 電話番号形式（金額パラメータを追加）
-                paypayUrl = `paypay://send?phone=${sellerInfo.paypay_id}&amount=${amount}`;
-            } else {
-                // PayPay ID形式（@マークやハイフンを含む形式も対応）
-                // @マークを除去して使用
-                const paypayId = sellerInfo.paypay_id.replace(/^@/, '');
-                paypayUrl = `paypay://send?id=${paypayId}&amount=${amount}`;
-            }
-
-            // PayPayアプリを開く（スマホの場合）
-            window.location.href = paypayUrl;
-            
-            // 「支払い完了」ボタンを表示
-            const confirmButton = document.getElementById('confirmPaymentToSeller');
-            const payButton = document.getElementById('payToSellerButton');
-            if (confirmButton) {
-                confirmButton.style.display = 'block';
-                confirmButton.onclick = () => this.confirmPaymentToSeller(amount);
-            }
-            if (payButton) {
-                payButton.style.display = 'none';
-            }
-            
-            // 金額を一時保存
-            this.pendingAmount = amount;
-        } catch (error) {
-            alert('売り手情報の取得に失敗しました: ' + error.message);
-            console.error(error);
-        }
-    }
-
-    // 支払い完了を確認
-    async confirmPaymentToSeller(amount) {
-        try {
-            // 支払いを記録（買い手のポイントカードに追加、売り手IDも記録）
-            await this.pointsCard.addPayment(amount, this.sellerId);
-            alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
-            
-            // メイン画面に戻る
-            window.location.href = window.location.origin;
-        } catch (error) {
-            alert('支払いの記録に失敗しました');
-            console.error(error);
-        }
-    }
-}
 
 // アプリケーションの初期化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -623,9 +515,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // PayPay決済の初期化
     const paypayPayment = new PayPayPayment(window.pointsCard);
 
-    // 支払いページ管理の初期化
-    const paymentPageManager = new PaymentPageManager(window.pointsCard);
-
     // Enterキーで支払いモーダルを開く
     const amountInput = document.getElementById('paymentAmount');
     if (amountInput) {
@@ -641,8 +530,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (submitReceiptButton) {
         submitReceiptButton.addEventListener('click', async () => {
             const amountInput = document.getElementById('receiptAmount');
+            const buyerNameInput = document.getElementById('receiptBuyerName');
             const memoInput = document.getElementById('receiptMemo');
             const amount = parseInt(amountInput.value);
+            const buyerName = buyerNameInput.value.trim();
             const memo = memoInput.value.trim();
 
             if (!amount || amount <= 0) {
@@ -650,20 +541,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            if (!buyerName) {
+                alert('買い手のユーザー名を入力してください');
+                return;
+            }
+
             try {
-                await apiCall('/seller/receipts', {
+                // 買い手のユーザーIDを取得
+                const users = await apiCall('/admin/users');
+                const buyer = users.find(u => u.username === buyerName);
+                
+                if (!buyer) {
+                    alert('該当する買い手が見つかりません。ユーザー名を確認してください。');
+                    return;
+                }
+
+                const response = await apiCall('/seller/receipts', {
                     method: 'POST',
                     body: JSON.stringify({
                         sellerId: currentUser.userId,
+                        buyerId: buyer.id,
                         amount: amount,
                         memo: memo
                     })
                 });
 
-                alert('受け取り記録を登録しました！\n運営が確認後にポイントカードに反映されます。');
+                // 自動処理されたかどうかを確認
+                if (response.receipt && response.receipt.status === 'PROCESSED') {
+                    alert('受け取り記録を登録し、自動的にポイントカードに反映しました！');
+                } else {
+                    alert('受け取り記録を登録しました！\n運営が確認後に買い手のポイントカードに反映されます。');
+                }
                 
                 // 入力欄をクリア
                 amountInput.value = '';
+                buyerNameInput.value = '';
                 memoInput.value = '';
             } catch (error) {
                 alert('記録の登録に失敗しました: ' + error.message);

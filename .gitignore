@@ -4,4 +4,5 @@ server/data/
 *.db
 .env
 .DS_Store
+LINE設定情報.md
 

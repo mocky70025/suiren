@@ -39,6 +39,7 @@ function createTables() {
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     paypay_id TEXT,
+                    line_user_id TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             `, (err) => {
@@ -54,6 +55,17 @@ function createTables() {
                         // エラーは無視（既にカラムが存在する場合）
                         if (alterErr && !alterErr.message.includes('duplicate column')) {
                             console.log('paypay_idカラムの追加:', alterErr.message);
+                        }
+                    });
+                    
+                    // 既存のテーブルにline_user_idカラムを追加（マイグレーション）
+                    db.run(`
+                        ALTER TABLE users 
+                        ADD COLUMN line_user_id TEXT
+                    `, (alterErr) => {
+                        // エラーは無視（既にカラムが存在する場合）
+                        if (alterErr && !alterErr.message.includes('duplicate column')) {
+                            console.log('line_user_idカラムの追加:', alterErr.message);
                         }
                     });
                 }
@@ -529,6 +541,62 @@ function processReceipt(receiptId, buyerId) {
     });
 }
 
+// LINEユーザーIDでユーザーを作成または取得
+function createOrGetUserByLineId(lineUserId, displayName = null) {
+    return new Promise((resolve, reject) => {
+        // 既存のユーザーを検索
+        db.get(
+            'SELECT * FROM users WHERE line_user_id = ?',
+            [lineUserId],
+            (err, user) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                
+                if (user) {
+                    // 既存ユーザーを返す
+                    resolve({ id: user.id, username: user.username, lineUserId: user.line_user_id });
+                    return;
+                }
+                
+                // 新規ユーザーを作成
+                const username = displayName || `LINE_${lineUserId.substring(0, 8)}`;
+                const passwordHash = ''; // LINEログインの場合はパスワード不要
+                
+                db.run(
+                    'INSERT INTO users (username, password_hash, line_user_id) VALUES (?, ?, ?)',
+                    [username, passwordHash, lineUserId],
+                    function(insertErr) {
+                        if (insertErr) {
+                            reject(insertErr);
+                        } else {
+                            resolve({ id: this.lastID, username: username, lineUserId: lineUserId });
+                        }
+                    }
+                );
+            }
+        );
+    });
+}
+
+// LINEユーザーIDでユーザーを取得
+function getUserByLineId(lineUserId) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            'SELECT * FROM users WHERE line_user_id = ?',
+            [lineUserId],
+            (err, user) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(user);
+                }
+            }
+        );
+    });
+}
+
 module.exports = {
     init,
     createUser,
@@ -545,6 +613,8 @@ module.exports = {
     getPendingReceipts,
     getAllReceipts,
     getAllPayments,
-    processReceipt
+    processReceipt,
+    createOrGetUserByLineId,
+    getUserByLineId
 };
 
