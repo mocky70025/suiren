@@ -185,14 +185,16 @@ async function generateQR() {
 
     // PayPay個人送金用のURLを生成
     // 電話番号の場合: paypay://send?phone=09012345678
-    // PayPay IDの場合: paypay://send?id=paypay-id
+    // PayPay IDの場合: paypay://send?id=paypay-id（ハイフンを含む形式も対応）
     let paypayUrl;
     if (paypayId.match(/^0\d{9,10}$/)) {
-        // 電話番号形式
+        // 電話番号形式（09012345678など）
         paypayUrl = `paypay://send?phone=${paypayId}`;
     } else {
-        // PayPay ID形式
-        paypayUrl = `paypay://send?id=${paypayId}`;
+        // PayPay ID形式（@マークやハイフンを含む形式も対応）
+        // @マークを除去して使用
+        const cleanPayPayId = paypayId.replace(/^@/, '');
+        paypayUrl = `paypay://send?id=${cleanPayPayId}`;
     }
     
     // QRコードに含めるURL（売り手のユーザーIDを含む）

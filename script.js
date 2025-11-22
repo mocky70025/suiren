@@ -625,12 +625,15 @@ class PaymentPageManager {
 
             // PayPay個人送金用のURLを生成（金額を含める）
             let paypayUrl;
+            // 電話番号形式（09012345678など）かチェック
             if (sellerInfo.paypay_id.match(/^0\d{9,10}$/)) {
                 // 電話番号形式（金額パラメータを追加）
                 paypayUrl = `paypay://send?phone=${sellerInfo.paypay_id}&amount=${amount}`;
             } else {
-                // PayPay ID形式（金額パラメータを追加）
-                paypayUrl = `paypay://send?id=${sellerInfo.paypay_id}&amount=${amount}`;
+                // PayPay ID形式（@マークやハイフンを含む形式も対応）
+                // @マークを除去して使用
+                const paypayId = sellerInfo.paypay_id.replace(/^@/, '');
+                paypayUrl = `paypay://send?id=${paypayId}&amount=${amount}`;
             }
 
             // PayPayアプリを開く（スマホの場合）
