@@ -379,29 +379,89 @@ class PayPayPayment {
         }
     }
 
-    // PayPayリンクを生成
-    generatePayPayLink(amount) {
+    // PayPayリンクを生成（PayPay API使用）
+    async generatePayPayLink(amount) {
         const paypayLink = document.getElementById('paypayLink');
         const qrCode = document.getElementById('qrCode');
 
-        // PayPayアプリのURLスキーム
-        const paypayUrl = `paypay://payment?amount=${amount}`;
-        
-        if (paypayLink) {
-            paypayLink.href = paypayUrl;
-        }
+        try {
+            // PayPay APIで支払いリンクを作成
+            const response = await apiCall('/paypay/create-link', {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: currentUser.userId,
+                    amount: amount,
+                    description: `支払い: ${amount}円`
+                })
+            });
 
-        // QRコードのプレースホルダー
-        if (qrCode) {
-            qrCode.innerHTML = `
-                <div style="text-align: center;">
-                    <p style="margin-bottom: 10px;">QRコード</p>
-                    <p style="font-size: 0.9em; color: #999;">
-                        金額: ${amount.toLocaleString()}円<br>
-                        PayPayアプリでスキャンしてください
-                    </p>
-                </div>
-            `;
+            if (response.success) {
+                // 支払いリンクを設定
+                if (paypayLink) {
+                    paypayLink.href = response.paymentLink;
+                    paypayLink.textContent = 'PayPayで支払う';
+                }
+
+                // QRコードを表示
+                if (qrCode && response.qrCodeUrl) {
+                    qrCode.innerHTML = `
+                        <img src="${response.qrCodeUrl}" alt="PayPay QRコード" style="max-width: 100%; height: auto;">
+                    `;
+                }
+
+                // 決済完了を監視
+                this.monitorPayment(response.orderId);
+            }
+        } catch (error) {
+            console.error('PayPayリンク生成エラー:', error);
+            alert('PayPayリンクの生成に失敗しました: ' + error.message);
+            
+            // フォールバック: 従来の方法
+            const paypayUrl = `paypay://payment?amount=${amount}`;
+            if (paypayLink) {
+                paypayLink.href = paypayUrl;
+            }
+        }
+    }
+
+    // 決済完了を監視（ポーリング）
+    monitorPayment(orderId) {
+        let attempts = 0;
+        const maxAttempts = 60; // 最大5分間（5秒間隔）
+
+        const checkInterval = setInterval(async () => {
+            attempts++;
+
+            try {
+                const status = await apiCall(`/paypay/status/${orderId}`);
+                
+                if (status.status === 'COMPLETED' || status.status === 'APPROVED') {
+                    clearInterval(checkInterval);
+                    // 決済完了を処理
+                    await this.completePayment();
+                } else if (status.status === 'CANCELED' || status.status === 'REJECTED') {
+                    clearInterval(checkInterval);
+                    alert('決済がキャンセルされました');
+                }
+            } catch (error) {
+                console.error('決済状況確認エラー:', error);
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                console.log('決済監視を終了しました');
+            }
+        }, 5000); // 5秒ごとに確認
+
+        // モーダルが閉じられたら監視を停止
+        const modal = document.getElementById('paypayModal');
+        if (modal) {
+            const observer = new MutationObserver(() => {
+                if (modal.style.display === 'none') {
+                    clearInterval(checkInterval);
+                }
+            });
+            observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
         }
     }
 
@@ -515,17 +575,58 @@ class PaymentPageManager {
             return;
         }
 
-        // 支払いを記録（買い手のポイントカードに追加、売り手IDも記録）
+        // PayPay APIで支払いリンクを作成
         try {
-            await this.pointsCard.addPayment(amount, this.sellerId);
-            alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
-            
-            // メイン画面に戻る
-            window.location.href = window.location.origin;
+            const response = await apiCall('/paypay/create-link', {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: currentUser.userId,
+                    amount: amount,
+                    sellerId: this.sellerId,
+                    description: `支払い: ${amount}円`
+                })
+            });
+
+            if (response.success) {
+                // PayPayの支払いリンクにリダイレクト
+                window.location.href = response.paymentLink;
+                
+                // 決済完了を監視（バックグラウンド）
+                this.monitorPaymentForSeller(response.orderId, amount);
+            }
         } catch (error) {
-            alert('支払いの記録に失敗しました');
+            alert('PayPayリンクの生成に失敗しました: ' + error.message);
             console.error(error);
         }
+    }
+
+    // 売り手への支払いの決済完了を監視
+    monitorPaymentForSeller(orderId, amount) {
+        let attempts = 0;
+        const maxAttempts = 60;
+
+        const checkInterval = setInterval(async () => {
+            attempts++;
+
+            try {
+                const status = await apiCall(`/paypay/status/${orderId}`);
+                
+                if (status.status === 'COMPLETED' || status.status === 'APPROVED') {
+                    clearInterval(checkInterval);
+                    alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
+                    window.location.href = window.location.origin;
+                } else if (status.status === 'CANCELED' || status.status === 'REJECTED') {
+                    clearInterval(checkInterval);
+                    alert('決済がキャンセルされました');
+                }
+            } catch (error) {
+                console.error('決済状況確認エラー:', error);
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+            }
+        }, 5000);
     }
 }
 
