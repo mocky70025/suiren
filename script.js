@@ -562,35 +562,66 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 売り手のPayPay IDを取得
                 const sellerInfo = await apiCall('/seller/paypay-id');
                 const paypayId = sellerInfo.paypayId;
+                const sellerName = sellerInfo.sellerName;
                 
-                // PayPay送金リンクを生成
-                // PayPay IDの形式に応じてリンクを生成
-                let paypayLink;
+                // PayPayアプリを開いて受け取りリンク作成画面に誘導
+                // 注意: PayPayアプリでは受け取りリンクを手動作成する必要があります
+                // 金額情報を含むURLスキームは公式にサポートされていないため、
+                // ユーザーにPayPayアプリで手動でリンクを作成してもらう必要があります
+                
+                // PayPayアプリを開く（金額は手動入力）
+                let paypayAppLink;
                 if (paypayId.startsWith('@')) {
-                    // PayPay ID形式（@で始まる）
-                    paypayLink = `paypay://send?id=${paypayId.substring(1)}&amount=${amount}`;
+                    paypayAppLink = `paypay://send?id=${paypayId.substring(1)}`;
                 } else if (/^\d+-\d+-\w+$/.test(paypayId)) {
-                    // PayPay ID形式（ハイフン区切り）
-                    paypayLink = `paypay://send?id=${paypayId}&amount=${amount}`;
+                    paypayAppLink = `paypay://send?id=${paypayId}`;
                 } else if (/^0\d{9,10}$/.test(paypayId)) {
-                    // 電話番号形式
-                    paypayLink = `paypay://send?phone=${paypayId}&amount=${amount}`;
+                    paypayAppLink = `paypay://send?phone=${paypayId}`;
                 } else {
-                    // その他の形式（PayPay IDとして扱う）
-                    paypayLink = `paypay://send?id=${paypayId}&amount=${amount}`;
+                    paypayAppLink = `paypay://send?id=${paypayId}`;
                 }
                 
-                // リンクを表示
-                if (generatedLinkInput) {
-                    generatedLinkInput.value = paypayLink;
-                }
-                if (openPayPayLink) {
-                    openPayPayLink.href = paypayLink;
-                }
+                // 説明文を生成（金額と売り手情報を含む）
+                const instructionText = `【PayPay受け取りリンク作成手順】
+
+1. 下の「PayPayアプリを開く」ボタンをクリック
+2. PayPayアプリが開いたら、金額「${amount.toLocaleString()}円」を入力
+3. 「SNSで送る」を選択
+4. 「${amount.toLocaleString()}円のリンクを作成する」をタップ
+5. 作成されたリンクをコピー
+6. LINE公式アカウントのチャットに貼り付けて送信
+
+※ 売り手: ${sellerName} (PayPay ID: ${paypayId})`;
                 
+                // 説明を表示
                 const linkResult = document.getElementById('linkResult');
                 if (linkResult) {
+                    const instructionDiv = document.createElement('div');
+                    instructionDiv.className = 'link-instruction-box';
+                    instructionDiv.innerHTML = `<pre style="white-space: pre-wrap; background: #f0f0f0; padding: 15px; border-radius: 8px; font-size: 0.9em; line-height: 1.6;">${instructionText}</pre>`;
+                    
+                    // 既存の説明を削除して新しい説明を追加
+                    const existingInstruction = linkResult.querySelector('.link-instruction-box');
+                    if (existingInstruction) {
+                        existingInstruction.remove();
+                    }
+                    linkResult.insertBefore(instructionDiv, linkResult.querySelector('.link-actions'));
+                    
                     linkResult.style.display = 'block';
+                }
+                
+                // PayPayアプリを開くリンクを設定
+                if (openPayPayLink) {
+                    openPayPayLink.href = paypayAppLink;
+                    openPayPayLink.textContent = 'PayPayアプリを開く（金額を入力してください）';
+                }
+                
+                // 生成されたリンク入力欄は非表示（手動作成のため）
+                if (generatedLinkInput) {
+                    generatedLinkInput.style.display = 'none';
+                }
+                if (copyLinkButton) {
+                    copyLinkButton.style.display = 'none';
                 }
             } catch (error) {
                 alert('PayPay IDの取得に失敗しました: ' + error.message);
