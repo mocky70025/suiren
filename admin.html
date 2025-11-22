@@ -34,10 +34,8 @@
                 <section class="admin-qr-section">
                     <h2>売り手QRコード生成</h2>
                     <div class="seller-select-form">
-                        <label for="sellerSelect">売り手を選択</label>
-                        <select id="sellerSelect" class="seller-select">
-                            <option value="">売り手を選択してください</option>
-                        </select>
+                        <label for="sellerNameInput">売り手のユーザー名</label>
+                        <input type="text" id="sellerNameInput" class="seller-name-input" placeholder="売り手のユーザー名を入力">
                         
                         <button id="generateSellerQRButton" class="generate-button">
                             QRコードを生成
@@ -62,6 +60,32 @@
                                 閉じる
                             </button>
                         </div>
+                    </div>
+                </section>
+
+                <!-- 売り手情報表示セクション -->
+                <section class="seller-info-section-admin">
+                    <h2>売り手情報</h2>
+                    <div id="sellerInfoArea" style="display: none;">
+                        <div class="seller-stats">
+                            <div class="stat-item">
+                                <p class="stat-label">累計入金金額</p>
+                                <p class="stat-value" id="totalEarnings">0円</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label">取引回数</p>
+                                <p class="stat-value" id="transactionCount">0回</p>
+                            </div>
+                        </div>
+                        <div class="transaction-history">
+                            <h3>取引履歴</h3>
+                            <ul id="transactionList" class="transaction-list">
+                                <li class="no-history">まだ取引履歴がありません</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="noSellerSelected" class="no-seller-message">
+                        売り手を選択すると、累計入金金額と取引履歴が表示されます
                     </div>
                 </section>
 

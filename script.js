@@ -259,7 +259,7 @@ class PointsCard {
     }
 
     // 支払いを追加
-    async addPayment(amount) {
+    async addPayment(amount, sellerId = null) {
         if (!currentUser) {
             alert('ログインが必要です');
             return;
@@ -268,7 +268,7 @@ class PointsCard {
         try {
             await apiCall(`/users/${currentUser.userId}/payments`, {
                 method: 'POST',
-                body: JSON.stringify({ amount })
+                body: JSON.stringify({ amount, sellerId })
             });
             
             // データを再読み込み
@@ -409,7 +409,8 @@ class PayPayPayment {
     async completePayment() {
         if (this.currentAmount > 0) {
             try {
-                await this.pointsCard.addPayment(this.currentAmount);
+                // 通常の支払い（売り手なし）
+                await this.pointsCard.addPayment(this.currentAmount, null);
                 this.closeModal();
                 
                 // 入力欄をクリア
@@ -514,9 +515,9 @@ class PaymentPageManager {
             return;
         }
 
-        // 支払いを記録（買い手のポイントカードに追加）
+        // 支払いを記録（買い手のポイントカードに追加、売り手IDも記録）
         try {
-            await this.pointsCard.addPayment(amount);
+            await this.pointsCard.addPayment(amount, this.sellerId);
             alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
             
             // メイン画面に戻る

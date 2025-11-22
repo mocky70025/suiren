@@ -15,7 +15,6 @@ function checkAuth() {
     if (saved === 'true') {
         isAuthenticated = true;
         showAdminScreen();
-        loadSellers();
     } else {
         showAuthScreen();
     }
@@ -42,7 +41,6 @@ function login() {
         isAuthenticated = true;
         sessionStorage.setItem('adminAuth', 'true');
         showAdminScreen();
-        loadSellers();
         errorDiv.style.display = 'none';
     } else {
         errorDiv.textContent = 'パスワードが正しくありません';
@@ -60,63 +58,98 @@ function logout() {
     }
 }
 
-// 売り手一覧を取得（簡易版：実際には全ユーザーを取得するAPIが必要）
-async function loadSellers() {
-    // 注意: 実際の実装では、全ユーザーを取得するAPIが必要です
-    // ここでは、手動でユーザーIDを入力する方法も提供します
-    
-    const sellerSelect = document.getElementById('sellerSelect');
-    
-    // 既存のオプションをクリア（最初の「選択してください」以外）
-    while (sellerSelect.children.length > 1) {
-        sellerSelect.removeChild(sellerSelect.lastChild);
+// 売り手情報を読み込む（ユーザー名から）
+async function loadSellerInfoByName(username) {
+    if (!username) {
+        hideSellerInfo();
+        return;
     }
 
-    // 簡易版：ユーザーIDを直接入力できるオプションを追加
-    const manualOption = document.createElement('option');
-    manualOption.value = 'manual';
-    manualOption.textContent = 'ユーザーIDを直接入力';
-    sellerSelect.appendChild(manualOption);
+    try {
+        // 全ユーザーから該当するユーザーを検索
+        const users = await fetch(`${API_BASE}/admin/users`).then(r => r.json());
+        const seller = users.find(u => u.username === username);
+        
+        if (!seller) {
+            alert('該当するユーザーが見つかりません');
+            hideSellerInfo();
+            return;
+        }
+
+        await loadSellerInfo(seller.id);
+    } catch (error) {
+        console.error('売り手情報の取得に失敗しました:', error);
+        alert('売り手情報の取得に失敗しました');
+    }
+}
+
+// 売り手情報を読み込む
+async function loadSellerInfo(sellerId) {
+    try {
+        // 累計入金金額を取得
+        const earnings = await fetch(`${API_BASE}/admin/sellers/${sellerId}/earnings`).then(r => r.json());
+        
+        // 取引履歴を取得
+        const transactions = await fetch(`${API_BASE}/admin/sellers/${sellerId}/transactions`).then(r => r.json());
+
+        // 表示を更新
+        document.getElementById('totalEarnings').textContent = earnings.totalEarnings.toLocaleString() + '円';
+        document.getElementById('transactionCount').textContent = earnings.transactionCount + '回';
+
+        // 取引履歴を表示
+        const transactionList = document.getElementById('transactionList');
+        if (transactions.length === 0) {
+            transactionList.innerHTML = '<li class="no-history">まだ取引履歴がありません</li>';
+        } else {
+            transactionList.innerHTML = transactions.map(t => `
+                <li>
+                    <span class="transaction-date">${t.date}</span>
+                    <span class="transaction-buyer">${t.buyerName}</span>
+                    <span class="transaction-amount">+${t.amount.toLocaleString()}円</span>
+                </li>
+            `).join('');
+        }
+
+        // 情報エリアを表示
+        document.getElementById('sellerInfoArea').style.display = 'block';
+        document.getElementById('noSellerSelected').style.display = 'none';
+    } catch (error) {
+        console.error('売り手情報の取得に失敗しました:', error);
+        alert('売り手情報の取得に失敗しました');
+    }
+}
+
+// 売り手情報を非表示
+function hideSellerInfo() {
+    document.getElementById('sellerInfoArea').style.display = 'none';
+    document.getElementById('noSellerSelected').style.display = 'block';
 }
 
 // QRコードを生成
 async function generateQR() {
-    const sellerSelect = document.getElementById('sellerSelect');
-    const selectedValue = sellerSelect.value;
+    const sellerNameInput = document.getElementById('sellerNameInput');
+    const sellerName = sellerNameInput.value.trim();
 
-    if (!selectedValue) {
-        alert('売り手を選択してください');
+    if (!sellerName) {
+        alert('売り手のユーザー名を入力してください');
         return;
     }
 
-    let sellerId, sellerName;
-
-    if (selectedValue === 'manual') {
-        // 手動入力
-        const userId = prompt('売り手のユーザーIDを入力してください:');
-        if (!userId) {
-            return;
-        }
-        sellerId = parseInt(userId);
+    // ユーザー名からユーザーIDを取得
+    let sellerId;
+    try {
+        const users = await fetch(`${API_BASE}/admin/users`).then(r => r.json());
+        const seller = users.find(u => u.username === sellerName);
         
-        // ユーザー情報を取得
-        try {
-            const userInfo = await fetch(`${API_BASE}/users/${sellerId}`).then(r => r.json());
-            sellerName = userInfo.username;
-        } catch (error) {
-            alert('ユーザー情報の取得に失敗しました');
+        if (!seller) {
+            alert('該当するユーザーが見つかりません');
             return;
         }
-    } else {
-        sellerId = parseInt(selectedValue);
-        // ユーザー情報を取得
-        try {
-            const userInfo = await fetch(`${API_BASE}/users/${sellerId}`).then(r => r.json());
-            sellerName = userInfo.username;
-        } catch (error) {
-            alert('ユーザー情報の取得に失敗しました');
-            return;
-        }
+        
+        sellerId = seller.id;
+    } catch (error) {
+        alert('ユーザー情報の取得に失敗しました');
+        return;
     }
 
     const qrDisplayArea = document.getElementById('qrDisplayArea');
@@ -144,6 +177,9 @@ async function generateQR() {
 
         // 売り手名を表示
         qrSellerName.textContent = sellerName;
+        
+        // 売り手情報も表示
+        await loadSellerInfo(sellerId);
 
         // 表示エリアを表示
         qrDisplayArea.style.display = 'block';
@@ -195,6 +231,26 @@ function closeQR() {
 document.addEventListener('DOMContentLoaded', () => {
     // 認証チェック
     checkAuth();
+    
+    // 売り手名入力時のイベント（EnterキーでQRコード生成）
+    const sellerNameInput = document.getElementById('sellerNameInput');
+    if (sellerNameInput) {
+        sellerNameInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                await generateQR();
+            }
+        });
+        
+        // 入力時に売り手情報を更新
+        sellerNameInput.addEventListener('input', async () => {
+            const username = sellerNameInput.value.trim();
+            if (username) {
+                await loadSellerInfoByName(username);
+            } else {
+                hideSellerInfo();
+            }
+        });
+    }
 
     // ログインボタン
     const loginButton = document.getElementById('adminLoginButton');

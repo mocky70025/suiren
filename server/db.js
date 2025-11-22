@@ -52,16 +52,28 @@ function createTables() {
                 CREATE TABLE IF NOT EXISTS payments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
+                    seller_id INTEGER,
                     amount INTEGER NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (seller_id) REFERENCES users(id)
                 )
             `, (err) => {
                 if (err) {
                     console.error('支払いテーブル作成エラー:', err);
                     reject(err);
                 } else {
-                    resolve();
+                    // 既存のテーブルにseller_idカラムを追加（マイグレーション）
+                    db.run(`
+                        ALTER TABLE payments 
+                        ADD COLUMN seller_id INTEGER
+                    `, (alterErr) => {
+                        // エラーは無視（既にカラムが存在する場合）
+                        if (alterErr && !alterErr.message.includes('duplicate column')) {
+                            console.log('seller_idカラムの追加:', alterErr.message);
+                        }
+                        resolve();
+                    });
                 }
             });
         });
@@ -140,11 +152,11 @@ function getUserPoints(userId) {
 }
 
 // 支払いを追加
-function addPayment(userId, amount) {
+function addPayment(userId, amount, sellerId = null) {
     return new Promise((resolve, reject) => {
         db.run(
-            'INSERT INTO payments (user_id, amount) VALUES (?, ?)',
-            [userId, amount],
+            'INSERT INTO payments (user_id, amount, seller_id) VALUES (?, ?, ?)',
+            [userId, amount, sellerId],
             function(err) {
                 if (err) {
                     reject(err);
@@ -204,6 +216,82 @@ function getPayments(userId, limit = 50) {
     });
 }
 
+// 全ユーザー一覧取得
+function getAllUsers() {
+    return new Promise((resolve, reject) => {
+        db.all(
+            'SELECT id, username, created_at FROM users ORDER BY username',
+            [],
+            (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(row => ({
+                        id: row.id,
+                        username: row.username,
+                        createdAt: row.created_at
+                    })));
+                }
+            }
+        );
+    });
+}
+
+// 売り手の受け取り金額取得
+function getSellerEarnings(sellerId) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `SELECT 
+                COALESCE(SUM(amount), 0) as totalEarnings,
+                COUNT(*) as transactionCount
+             FROM payments 
+             WHERE seller_id = ?`,
+            [sellerId],
+            (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({
+                        totalEarnings: row.totalEarnings || 0,
+                        transactionCount: row.transactionCount || 0
+                    });
+                }
+            }
+        );
+    });
+}
+
+// 売り手の受け取り履歴取得
+function getSellerTransactions(sellerId, limit = 50) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `SELECT 
+                p.id,
+                p.amount,
+                p.created_at,
+                u.username as buyer_name
+             FROM payments p
+             LEFT JOIN users u ON p.user_id = u.id
+             WHERE p.seller_id = ?
+             ORDER BY p.created_at DESC
+             LIMIT ?`,
+            [sellerId, limit],
+            (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(row => ({
+                        id: row.id,
+                        amount: row.amount,
+                        buyerName: row.buyer_name || '不明',
+                        date: new Date(row.created_at).toLocaleString('ja-JP')
+                    })));
+                }
+            }
+        );
+    });
+}
+
 module.exports = {
     init,
     createUser,
@@ -211,6 +299,9 @@ module.exports = {
     getUser,
     getUserPoints,
     addPayment,
-    getPayments
+    getPayments,
+    getAllUsers,
+    getSellerEarnings,
+    getSellerTransactions
 };
 

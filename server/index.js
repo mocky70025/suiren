@@ -92,13 +92,14 @@ app.get('/api/users/:userId/points', async (req, res) => {
 app.post('/api/users/:userId/payments', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
-        const { amount } = req.body;
+        const { amount, sellerId } = req.body;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ error: '正しい金額を入力してください' });
         }
 
-        const payment = await db.addPayment(userId, amount);
+        const sellerIdInt = sellerId ? parseInt(sellerId) : null;
+        const payment = await db.addPayment(userId, amount, sellerIdInt);
         res.json({ success: true, payment });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -111,6 +112,40 @@ app.get('/api/users/:userId/payments', async (req, res) => {
         const userId = parseInt(req.params.userId);
         const payments = await db.getPayments(userId);
         res.json(payments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== 運営用API ====================
+
+// 全ユーザー一覧取得
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const users = await db.getAllUsers();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 売り手の受け取り金額取得
+app.get('/api/admin/sellers/:sellerId/earnings', async (req, res) => {
+    try {
+        const sellerId = parseInt(req.params.sellerId);
+        const earnings = await db.getSellerEarnings(sellerId);
+        res.json(earnings);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 売り手の受け取り履歴取得
+app.get('/api/admin/sellers/:sellerId/transactions', async (req, res) => {
+    try {
+        const sellerId = parseInt(req.params.sellerId);
+        const transactions = await db.getSellerTransactions(sellerId);
+        res.json(transactions);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
