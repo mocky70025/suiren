@@ -89,9 +89,28 @@ app.get('/api/users/:userId/points', async (req, res) => {
     }
 });
 
-// ==================== PayPay決済 ====================
+// ==================== PayPay設定 ====================
 
-// PayPay支払いリンクを作成
+// PayPay IDを更新
+app.post('/api/users/:userId/paypay-id', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const { paypayId } = req.body;
+
+        if (!paypayId) {
+            return res.status(400).json({ error: 'PayPay IDが必要です' });
+        }
+
+        await db.updatePayPayId(userId, paypayId);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== PayPay決済（API使用 - オプション） ====================
+
+// PayPay支払いリンクを作成（PayPay API使用時のみ）
 app.post('/api/paypay/create-link', async (req, res) => {
     try {
         const { userId, amount, sellerId, description } = req.body;
@@ -243,6 +262,57 @@ app.get('/api/admin/sellers/:sellerId/transactions', async (req, res) => {
         const sellerId = parseInt(req.params.sellerId);
         const transactions = await db.getSellerTransactions(sellerId);
         res.json(transactions);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== 売り手受け取り記録 ====================
+
+// 売り手が受け取った金額を記録
+app.post('/api/seller/receipts', async (req, res) => {
+    try {
+        const { sellerId, amount, buyerId, memo } = req.body;
+
+        if (!sellerId || !amount || amount <= 0) {
+            return res.status(400).json({ error: '売り手IDと金額が必要です' });
+        }
+
+        const receipt = await db.addSellerReceipt(
+            parseInt(sellerId),
+            amount,
+            buyerId ? parseInt(buyerId) : null,
+            memo || ''
+        );
+
+        res.json({ success: true, receipt });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 未処理の受け取り記録を取得（運営用）
+app.get('/api/admin/pending-receipts', async (req, res) => {
+    try {
+        const receipts = await db.getPendingReceipts();
+        res.json(receipts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 受け取り記録を処理（買い手のポイントカードに反映）
+app.post('/api/admin/receipts/:receiptId/process', async (req, res) => {
+    try {
+        const receiptId = parseInt(req.params.receiptId);
+        const { buyerId } = req.body;
+
+        if (!buyerId) {
+            return res.status(400).json({ error: '買い手IDが必要です' });
+        }
+
+        await db.processReceipt(receiptId, parseInt(buyerId));
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

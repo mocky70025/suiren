@@ -38,12 +38,24 @@ function createTables() {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
+                    paypay_id TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             `, (err) => {
                 if (err) {
                     console.error('ユーザーテーブル作成エラー:', err);
                     reject(err);
+                } else {
+                    // 既存のテーブルにpaypay_idカラムを追加（マイグレーション）
+                    db.run(`
+                        ALTER TABLE users 
+                        ADD COLUMN paypay_id TEXT
+                    `, (alterErr) => {
+                        // エラーは無視（既にカラムが存在する場合）
+                        if (alterErr && !alterErr.message.includes('duplicate column')) {
+                            console.log('paypay_idカラムの追加:', alterErr.message);
+                        }
+                    });
                 }
             });
 
@@ -72,9 +84,29 @@ function createTables() {
                         if (alterErr && !alterErr.message.includes('duplicate column')) {
                             console.log('seller_idカラムの追加:', alterErr.message);
                         }
-                        resolve();
                     });
                 }
+            });
+
+            // 売り手受け取り記録テーブル
+            db.run(`
+                CREATE TABLE IF NOT EXISTS seller_receipts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    seller_id INTEGER NOT NULL,
+                    buyer_id INTEGER,
+                    amount INTEGER NOT NULL,
+                    status TEXT DEFAULT 'PENDING',
+                    memo TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    processed_at DATETIME,
+                    FOREIGN KEY (seller_id) REFERENCES users(id),
+                    FOREIGN KEY (buyer_id) REFERENCES users(id)
+                )
+            `, (err) => {
+                if (err) {
+                    console.error('受け取り記録テーブル作成エラー:', err);
+                }
+                resolve();
             });
         });
     });
@@ -177,13 +209,30 @@ function addPayment(userId, amount, sellerId = null) {
 function getUser(userId) {
     return new Promise((resolve, reject) => {
         db.get(
-            'SELECT id, username FROM users WHERE id = ?',
+            'SELECT id, username, paypay_id FROM users WHERE id = ?',
             [userId],
             (err, user) => {
                 if (err) {
                     reject(err);
                 } else {
                     resolve(user);
+                }
+            }
+        );
+    });
+}
+
+// ユーザーのPayPay IDを更新
+function updatePayPayId(userId, paypayId) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'UPDATE users SET paypay_id = ? WHERE id = ?',
+            [paypayId, userId],
+            function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true });
                 }
             }
         );
@@ -292,16 +341,136 @@ function getSellerTransactions(sellerId, limit = 50) {
     });
 }
 
+// 売り手受け取り記録を追加
+function addSellerReceipt(sellerId, amount, buyerId = null, memo = '') {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'INSERT INTO seller_receipts (seller_id, buyer_id, amount, memo) VALUES (?, ?, ?, ?)',
+            [sellerId, buyerId, amount, memo],
+            function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({
+                        id: this.lastID,
+                        sellerId,
+                        buyerId,
+                        amount,
+                        memo,
+                        status: 'PENDING',
+                        createdAt: new Date().toISOString()
+                    });
+                }
+            }
+        );
+    });
+}
+
+// 未処理の受け取り記録を取得
+function getPendingReceipts() {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `SELECT 
+                r.id,
+                r.amount,
+                r.memo,
+                r.created_at,
+                r.status,
+                s.username as seller_name,
+                b.username as buyer_name
+             FROM seller_receipts r
+             LEFT JOIN users s ON r.seller_id = s.id
+             LEFT JOIN users b ON r.buyer_id = b.id
+             WHERE r.status = 'PENDING'
+             ORDER BY r.created_at DESC`,
+            [],
+            (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(row => ({
+                        id: row.id,
+                        amount: row.amount,
+                        memo: row.memo || '',
+                        sellerName: row.seller_name,
+                        buyerName: row.buyer_name || '不明',
+                        date: new Date(row.created_at).toLocaleString('ja-JP'),
+                        status: row.status
+                    })));
+                }
+            }
+        );
+    });
+}
+
+// 受け取り記録を処理（買い手のポイントカードに反映）
+function processReceipt(receiptId, buyerId) {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            // 受け取り記録を取得
+            db.get(
+                'SELECT * FROM seller_receipts WHERE id = ?',
+                [receiptId],
+                (err, receipt) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+
+                    if (!receipt) {
+                        reject(new Error('受け取り記録が見つかりません'));
+                        return;
+                    }
+
+                    if (receipt.status !== 'PENDING') {
+                        reject(new Error('既に処理済みです'));
+                        return;
+                    }
+
+                    // 買い手のポイントカードに追加
+                    db.run(
+                        'INSERT INTO payments (user_id, seller_id, amount) VALUES (?, ?, ?)',
+                        [buyerId, receipt.seller_id, receipt.amount],
+                        function(paymentErr) {
+                            if (paymentErr) {
+                                reject(paymentErr);
+                                return;
+                            }
+
+                            // 受け取り記録のステータスを更新
+                            db.run(
+                                'UPDATE seller_receipts SET status = ?, buyer_id = ?, processed_at = ? WHERE id = ?',
+                                ['PROCESSED', buyerId, new Date().toISOString(), receiptId],
+                                (updateErr) => {
+                                    if (updateErr) {
+                                        reject(updateErr);
+                                    } else {
+                                        resolve({ success: true });
+                                    }
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        });
+    });
+}
+
 module.exports = {
     init,
     createUser,
     authenticateUser,
     getUser,
+    updatePayPayId,
     getUserPoints,
     addPayment,
     getPayments,
     getAllUsers,
     getSellerEarnings,
-    getSellerTransactions
+    getSellerTransactions,
+    addSellerReceipt,
+    getPendingReceipts,
+    processReceipt
 };
 

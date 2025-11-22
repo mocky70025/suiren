@@ -61,6 +61,25 @@
                     </div>
                 </section>
 
+                <!-- 売り手用: 受け取り記録セクション -->
+                <section class="seller-receipt-section" id="sellerReceiptSection" style="display: none;">
+                    <h2>受け取り記録</h2>
+                    <div class="receipt-form">
+                        <label for="receiptAmount">受け取った金額（円）</label>
+                        <input type="number" id="receiptAmount" min="1" placeholder="金額を入力" required>
+                        
+                        <label for="receiptMemo">メモ（任意）</label>
+                        <input type="text" id="receiptMemo" placeholder="例: 田中さんから" maxlength="50">
+                        
+                        <button id="submitReceiptButton" class="submit-receipt-button">
+                            記録する
+                        </button>
+                    </div>
+                    <p class="receipt-note">
+                        ※ 記録した金額は、運営が確認後にポイントカードに反映されます
+                    </p>
+                </section>
+
             <!-- ポイントカード表示セクション -->
             <section class="points-section">
                 <div class="points-card">
@@ -101,12 +120,17 @@
                         <div class="paypay-info">
                             <p class="amount-display">支払い金額: <span id="modalAmount">0</span>円</p>
                             <div class="paypay-qr">
-                                <p class="qr-instruction">以下のPayPayアプリでスキャンするか、リンクをタップしてください</p>
+                                <h3 class="payment-method-title">QRコードで支払う（推奨）</h3>
+                                <p class="qr-instruction">PayPayアプリでQRコードをスキャンしてください</p>
                                 <div class="qr-placeholder" id="qrCode">
-                                    <p>QRコードを表示</p>
+                                    <p>QRコードを読み込み中...</p>
                                 </div>
+                                <div class="payment-divider">
+                                    <span>または</span>
+                                </div>
+                                <h3 class="payment-method-title-sub">リンクで支払う</h3>
                                 <a href="#" id="paypayLink" class="paypay-link" target="_blank">
-                                    PayPayアプリで開く
+                                    PayPayで支払う
                                 </a>
                             </div>
                             <div class="payment-actions">
@@ -131,13 +155,26 @@
                     <div class="seller-info-display">
                         <p class="seller-label">売り手:</p>
                         <p class="seller-name" id="paymentSellerName">-</p>
+                        <p class="seller-paypay-id" id="paymentPayPayId" style="display: none;">
+                            PayPay ID: <span id="paypayIdValue"></span>
+                        </p>
                     </div>
                     <div class="payment-form">
                         <label for="paymentToSellerAmount">支払い金額（円）</label>
                         <input type="number" id="paymentToSellerAmount" min="1" placeholder="金額を入力" required>
                         
+                        <div class="payment-instructions">
+                            <p>1. 金額を入力</p>
+                            <p>2. 「PayPayで支払う」をクリックしてPayPayアプリを開く</p>
+                            <p>3. PayPayアプリで送金を完了</p>
+                            <p>4. 送金完了後、「支払い完了」をクリックして記録</p>
+                        </div>
+                        
                         <button id="payToSellerButton" class="pay-button">
                             PayPayで支払う
+                        </button>
+                        <button id="confirmPaymentToSeller" class="confirm-button" style="display: none;">
+                            支払い完了
                         </button>
                     </div>
                     <div class="payment-note">

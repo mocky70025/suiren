@@ -199,6 +199,26 @@ class AuthManager {
         if (usernameSpan && currentUser) {
             usernameSpan.textContent = `ようこそ、${currentUser.username}さん`;
         }
+
+        // 売り手かどうかを確認（運営画面でPayPay IDが設定されているか）
+        this.checkSellerStatus();
+    }
+
+    async checkSellerStatus() {
+        if (!currentUser) return;
+
+        try {
+            const userInfo = await apiCall(`/users/${currentUser.userId}`);
+            // PayPay IDが設定されている場合は売り手として扱う
+            if (userInfo.paypay_id) {
+                const sellerSection = document.getElementById('sellerReceiptSection');
+                if (sellerSection) {
+                    sellerSection.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('ユーザー情報の取得エラー:', error);
+        }
     }
 
     showLoginForm() {
@@ -396,17 +416,26 @@ class PayPayPayment {
             });
 
             if (response.success) {
-                // 支払いリンクを設定
-                if (paypayLink) {
-                    paypayLink.href = response.paymentLink;
-                    paypayLink.textContent = 'PayPayで支払う';
+                // QRコードを表示（メイン）
+                if (qrCode) {
+                    if (response.qrCodeUrl) {
+                        qrCode.innerHTML = `
+                            <img src="${response.qrCodeUrl}" alt="PayPay QRコード">
+                        `;
+                    } else {
+                        qrCode.innerHTML = `
+                            <p>QRコードの生成に失敗しました</p>
+                        `;
+                    }
                 }
 
-                // QRコードを表示
-                if (qrCode && response.qrCodeUrl) {
-                    qrCode.innerHTML = `
-                        <img src="${response.qrCodeUrl}" alt="PayPay QRコード" style="max-width: 100%; height: auto;">
-                    `;
+                // 支払いリンクを設定（サブ）
+                if (paypayLink && response.paymentLink) {
+                    paypayLink.href = response.paymentLink;
+                    paypayLink.textContent = 'PayPayで支払う';
+                    paypayLink.style.display = 'inline-block';
+                } else if (paypayLink) {
+                    paypayLink.style.display = 'none';
                 }
 
                 // 決済完了を監視
@@ -553,6 +582,16 @@ class PaymentPageManager {
             if (sellerNameEl) {
                 sellerNameEl.textContent = sellerInfo.username;
             }
+            
+            // PayPay IDが設定されている場合は表示
+            if (sellerInfo.paypay_id) {
+                const paypayInfoEl = document.getElementById('paymentPayPayId');
+                const paypayIdValueEl = document.getElementById('paypayIdValue');
+                if (paypayInfoEl && paypayIdValueEl) {
+                    paypayIdValueEl.textContent = sellerInfo.paypay_id;
+                    paypayInfoEl.style.display = 'block';
+                }
+            }
         } catch (error) {
             alert('売り手情報の取得に失敗しました');
             console.error(error);
@@ -575,58 +614,60 @@ class PaymentPageManager {
             return;
         }
 
-        // PayPay APIで支払いリンクを作成
+        // 売り手情報を取得
         try {
-            const response = await apiCall('/paypay/create-link', {
-                method: 'POST',
-                body: JSON.stringify({
-                    userId: currentUser.userId,
-                    amount: amount,
-                    sellerId: this.sellerId,
-                    description: `支払い: ${amount}円`
-                })
-            });
-
-            if (response.success) {
-                // PayPayの支払いリンクにリダイレクト
-                window.location.href = response.paymentLink;
-                
-                // 決済完了を監視（バックグラウンド）
-                this.monitorPaymentForSeller(response.orderId, amount);
+            const sellerInfo = await apiCall(`/users/${this.sellerId}`);
+            
+            if (!sellerInfo.paypay_id) {
+                alert('売り手のPayPay IDが設定されていません。運営に連絡してください。');
+                return;
             }
+
+            // PayPay個人送金用のURLを生成（金額を含める）
+            let paypayUrl;
+            if (sellerInfo.paypay_id.match(/^0\d{9,10}$/)) {
+                // 電話番号形式（金額パラメータを追加）
+                paypayUrl = `paypay://send?phone=${sellerInfo.paypay_id}&amount=${amount}`;
+            } else {
+                // PayPay ID形式（金額パラメータを追加）
+                paypayUrl = `paypay://send?id=${sellerInfo.paypay_id}&amount=${amount}`;
+            }
+
+            // PayPayアプリを開く（スマホの場合）
+            window.location.href = paypayUrl;
+            
+            // 「支払い完了」ボタンを表示
+            const confirmButton = document.getElementById('confirmPaymentToSeller');
+            const payButton = document.getElementById('payToSellerButton');
+            if (confirmButton) {
+                confirmButton.style.display = 'block';
+                confirmButton.onclick = () => this.confirmPaymentToSeller(amount);
+            }
+            if (payButton) {
+                payButton.style.display = 'none';
+            }
+            
+            // 金額を一時保存
+            this.pendingAmount = amount;
         } catch (error) {
-            alert('PayPayリンクの生成に失敗しました: ' + error.message);
+            alert('売り手情報の取得に失敗しました: ' + error.message);
             console.error(error);
         }
     }
 
-    // 売り手への支払いの決済完了を監視
-    monitorPaymentForSeller(orderId, amount) {
-        let attempts = 0;
-        const maxAttempts = 60;
-
-        const checkInterval = setInterval(async () => {
-            attempts++;
-
-            try {
-                const status = await apiCall(`/paypay/status/${orderId}`);
-                
-                if (status.status === 'COMPLETED' || status.status === 'APPROVED') {
-                    clearInterval(checkInterval);
-                    alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
-                    window.location.href = window.location.origin;
-                } else if (status.status === 'CANCELED' || status.status === 'REJECTED') {
-                    clearInterval(checkInterval);
-                    alert('決済がキャンセルされました');
-                }
-            } catch (error) {
-                console.error('決済状況確認エラー:', error);
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-            }
-        }, 5000);
+    // 支払い完了を確認
+    async confirmPaymentToSeller(amount) {
+        try {
+            // 支払いを記録（買い手のポイントカードに追加、売り手IDも記録）
+            await this.pointsCard.addPayment(amount, this.sellerId);
+            alert(`支払いが完了しました！\n${amount.toLocaleString()}円がポイントカードに追加されました。`);
+            
+            // メイン画面に戻る
+            window.location.href = window.location.origin;
+        } catch (error) {
+            alert('支払いの記録に失敗しました');
+            console.error(error);
+        }
     }
 }
 
@@ -655,6 +696,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         amountInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('payButton').click();
+            }
+        });
+    }
+
+    // 売り手用: 受け取り記録ボタン
+    const submitReceiptButton = document.getElementById('submitReceiptButton');
+    if (submitReceiptButton) {
+        submitReceiptButton.addEventListener('click', async () => {
+            const amountInput = document.getElementById('receiptAmount');
+            const memoInput = document.getElementById('receiptMemo');
+            const amount = parseInt(amountInput.value);
+            const memo = memoInput.value.trim();
+
+            if (!amount || amount <= 0) {
+                alert('正しい金額を入力してください');
+                return;
+            }
+
+            try {
+                await apiCall('/seller/receipts', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        sellerId: currentUser.userId,
+                        amount: amount,
+                        memo: memo
+                    })
+                });
+
+                alert('受け取り記録を登録しました！\n運営が確認後にポイントカードに反映されます。');
+                
+                // 入力欄をクリア
+                amountInput.value = '';
+                memoInput.value = '';
+            } catch (error) {
+                alert('記録の登録に失敗しました: ' + error.message);
+                console.error(error);
             }
         });
     }

@@ -15,6 +15,9 @@ function checkAuth() {
     if (saved === 'true') {
         isAuthenticated = true;
         showAdminScreen();
+        loadPendingReceipts();
+        // 定期的に更新（5分ごと）
+        setInterval(loadPendingReceipts, 5 * 60 * 1000);
     } else {
         showAuthScreen();
     }
@@ -41,6 +44,9 @@ function login() {
         isAuthenticated = true;
         sessionStorage.setItem('adminAuth', 'true');
         showAdminScreen();
+        loadPendingReceipts();
+        // 定期的に更新（5分ごと）
+        setInterval(loadPendingReceipts, 5 * 60 * 1000);
         errorDiv.style.display = 'none';
     } else {
         errorDiv.textContent = 'パスワードが正しくありません';
@@ -128,15 +134,22 @@ function hideSellerInfo() {
 // QRコードを生成
 async function generateQR() {
     const sellerNameInput = document.getElementById('sellerNameInput');
+    const sellerPayPayIdInput = document.getElementById('sellerPayPayId');
     const sellerName = sellerNameInput.value.trim();
+    const paypayId = sellerPayPayIdInput.value.trim();
 
     if (!sellerName) {
         alert('売り手のユーザー名を入力してください');
         return;
     }
 
+    if (!paypayId) {
+        alert('売り手のPayPay ID（電話番号またはPayPay ID）を入力してください');
+        return;
+    }
+
     // ユーザー名からユーザーIDを取得
-    let sellerId;
+    let sellerId, sellerInfo;
     try {
         const users = await fetch(`${API_BASE}/admin/users`).then(r => r.json());
         const seller = users.find(u => u.username === sellerName);
@@ -147,6 +160,16 @@ async function generateQR() {
         }
         
         sellerId = seller.id;
+        
+        // PayPay IDを保存
+        await fetch(`${API_BASE}/users/${sellerId}/paypay-id`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paypayId: paypayId })
+        });
+        
+        // ユーザー情報を取得
+        sellerInfo = await fetch(`${API_BASE}/users/${sellerId}`).then(r => r.json());
     } catch (error) {
         alert('ユーザー情報の取得に失敗しました');
         return;
@@ -160,7 +183,20 @@ async function generateQR() {
         return;
     }
 
+    // PayPay個人送金用のURLを生成
+    // 電話番号の場合: paypay://send?phone=09012345678
+    // PayPay IDの場合: paypay://send?id=paypay-id
+    let paypayUrl;
+    if (paypayId.match(/^0\d{9,10}$/)) {
+        // 電話番号形式
+        paypayUrl = `paypay://send?phone=${paypayId}`;
+    } else {
+        // PayPay ID形式
+        paypayUrl = `paypay://send?id=${paypayId}`;
+    }
+    
     // QRコードに含めるURL（売り手のユーザーIDを含む）
+    // 買い手がこのURLにアクセスして、金額を入力してPayPayで送金
     const paymentUrl = `${window.location.origin}/pay?sellerId=${sellerId}`;
     const qrData = paymentUrl;
 
@@ -298,4 +334,77 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutButton.addEventListener('click', logout);
     }
 });
+
+// 未処理の受け取り記録を読み込む
+async function loadPendingReceipts() {
+    try {
+        const receipts = await fetch(`${API_BASE}/admin/pending-receipts`).then(r => r.json());
+        const area = document.getElementById('pendingReceiptsArea');
+        
+        if (!area) return;
+
+        if (receipts.length === 0) {
+            area.innerHTML = '<p class="no-receipts">未処理の受け取り記録はありません</p>';
+            return;
+        }
+
+        // 全ユーザー一覧を取得（買い手選択用）
+        const users = await fetch(`${API_BASE}/admin/users`).then(r => r.json());
+
+        area.innerHTML = receipts.map(receipt => `
+            <div class="receipt-item">
+                <div class="receipt-info">
+                    <p class="receipt-amount">${receipt.amount.toLocaleString()}円</p>
+                    <p class="receipt-seller">売り手: ${receipt.sellerName}</p>
+                    <p class="receipt-date">${receipt.date}</p>
+                    ${receipt.memo ? `<p class="receipt-memo">メモ: ${receipt.memo}</p>` : ''}
+                </div>
+                <div class="receipt-actions">
+                    <select class="buyer-select" id="buyerSelect_${receipt.id}">
+                        <option value="">買い手を選択</option>
+                        ${users.map(u => `<option value="${u.id}">${u.username}</option>`).join('')}
+                    </select>
+                    <button class="process-button" onclick="processReceipt(${receipt.id})">
+                        反映
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('受け取り記録の読み込みエラー:', error);
+        const area = document.getElementById('pendingReceiptsArea');
+        if (area) {
+            area.innerHTML = '<p class="error-text">受け取り記録の読み込みに失敗しました</p>';
+        }
+    }
+}
+
+// 受け取り記録を処理
+async function processReceipt(receiptId) {
+    const buyerSelect = document.getElementById(`buyerSelect_${receiptId}`);
+    const buyerId = buyerSelect.value;
+
+    if (!buyerId) {
+        alert('買い手を選択してください');
+        return;
+    }
+
+    if (!confirm('この受け取り記録を買い手のポイントカードに反映しますか？')) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_BASE}/admin/receipts/${receiptId}/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyerId: parseInt(buyerId) })
+        });
+
+        alert('ポイントカードに反映しました！');
+        loadPendingReceipts();
+    } catch (error) {
+        alert('処理に失敗しました: ' + error.message);
+        console.error(error);
+    }
+}
 

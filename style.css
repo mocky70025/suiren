@@ -377,9 +377,26 @@ section {
     font-size: 1.2em;
 }
 
+.payment-method-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+    text-align: center;
+}
+
+.payment-method-title-sub {
+    font-size: 1em;
+    font-weight: bold;
+    margin: 15px 0 10px;
+    color: #666;
+    text-align: center;
+}
+
 .qr-instruction {
     margin-bottom: 20px;
     color: #666;
+    text-align: center;
 }
 
 .qr-placeholder {
@@ -387,12 +404,50 @@ section {
     height: 250px;
     margin: 0 auto 20px;
     background: #f5f5f5;
-    border: 2px dashed #ddd;
+    border: 2px solid #667eea;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #999;
+    padding: 10px;
+}
+
+.qr-placeholder img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 5px;
+}
+
+.payment-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.payment-divider::before,
+.payment-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #ddd;
+}
+
+.payment-divider::before {
+    left: 0;
+}
+
+.payment-divider::after {
+    right: 0;
+}
+
+.payment-divider span {
+    background: white;
+    padding: 0 15px;
+    color: #999;
+    font-size: 0.9em;
 }
 
 .paypay-link {
@@ -589,6 +644,30 @@ section {
     font-weight: bold;
 }
 
+.seller-paypay-id {
+    margin-top: 10px;
+    font-size: 1em;
+    opacity: 0.9;
+}
+
+.seller-paypay-id span {
+    font-weight: bold;
+}
+
+.payment-instructions {
+    margin: 15px 0;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    font-size: 0.9em;
+    line-height: 1.8;
+    color: #1976d2;
+}
+
+.payment-instructions p {
+    margin: 5px 0;
+}
+
 .payment-note {
     margin-top: 20px;
     padding: 15px;
@@ -596,6 +675,13 @@ section {
     border-radius: 8px;
     color: #856404;
     font-size: 0.9em;
+}
+
+.paypay-id-note {
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #666;
+    font-style: italic;
 }
 
 /* 運営用ページ */
@@ -733,6 +819,95 @@ section {
     font-size: 1.1em;
 }
 
+/* 未処理の受け取り記録セクション */
+.pending-receipts-section {
+    background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+    color: white;
+}
+
+.pending-receipts-section h2 {
+    margin-bottom: 20px;
+    color: white;
+}
+
+.receipt-item {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.receipt-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.receipt-amount {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.receipt-seller,
+.receipt-date {
+    font-size: 0.9em;
+    opacity: 0.9;
+    margin: 5px 0;
+}
+
+.receipt-memo {
+    font-size: 0.85em;
+    opacity: 0.8;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+.receipt-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.buyer-select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid white;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    font-size: 0.9em;
+    min-width: 150px;
+}
+
+.process-button {
+    padding: 10px 20px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.process-button:hover {
+    background: #45a049;
+}
+
+.loading-text,
+.no-receipts,
+.error-text {
+    text-align: center;
+    padding: 40px;
+    opacity: 0.9;
+    font-size: 1.1em;
+}
+
 .qr-actions {
     display: flex;
     flex-direction: column;
@@ -843,5 +1018,67 @@ section {
         width: 200px;
         height: 200px;
     }
+}
+
+/* 売り手用: 受け取り記録セクション */
+.seller-receipt-section {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.seller-receipt-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.receipt-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.receipt-form label {
+    font-weight: 600;
+    color: #555;
+}
+
+.receipt-form input {
+    padding: 15px;
+    font-size: 1em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.receipt-form input:focus {
+    outline: none;
+    border-color: #a8edea;
+}
+
+.submit-receipt-button {
+    padding: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    border: 2px solid white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+}
+
+.submit-receipt-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(168, 237, 234, 0.4);
+}
+
+.receipt-note {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #666;
+    text-align: center;
 }
 
