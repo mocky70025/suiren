@@ -399,98 +399,31 @@ class PayPayPayment {
         }
     }
 
-    // PayPayリンクを生成（PayPay API使用）
-    async generatePayPayLink(amount) {
+    // PayPayリンクを生成（個人送金方式）
+    generatePayPayLink(amount) {
         const paypayLink = document.getElementById('paypayLink');
         const qrCode = document.getElementById('qrCode');
 
-        try {
-            // PayPay APIで支払いリンクを作成
-            const response = await apiCall('/paypay/create-link', {
-                method: 'POST',
-                body: JSON.stringify({
-                    userId: currentUser.userId,
-                    amount: amount,
-                    description: `支払い: ${amount}円`
-                })
-            });
-
-            if (response.success) {
-                // QRコードを表示（メイン）
-                if (qrCode) {
-                    if (response.qrCodeUrl) {
-                        qrCode.innerHTML = `
-                            <img src="${response.qrCodeUrl}" alt="PayPay QRコード">
-                        `;
-                    } else {
-                        qrCode.innerHTML = `
-                            <p>QRコードの生成に失敗しました</p>
-                        `;
-                    }
-                }
-
-                // 支払いリンクを設定（サブ）
-                if (paypayLink && response.paymentLink) {
-                    paypayLink.href = response.paymentLink;
-                    paypayLink.textContent = 'PayPayで支払う';
-                    paypayLink.style.display = 'inline-block';
-                } else if (paypayLink) {
-                    paypayLink.style.display = 'none';
-                }
-
-                // 決済完了を監視
-                this.monitorPayment(response.orderId);
-            }
-        } catch (error) {
-            console.error('PayPayリンク生成エラー:', error);
-            alert('PayPayリンクの生成に失敗しました: ' + error.message);
-            
-            // フォールバック: 従来の方法
-            const paypayUrl = `paypay://payment?amount=${amount}`;
-            if (paypayLink) {
-                paypayLink.href = paypayUrl;
-            }
+        // 個人送金方式では、QRコードは表示しない（売り手への支払い時のみQRコードを使用）
+        // 通常の支払いでは、手動で「支払い完了」をクリックする方式
+        
+        if (qrCode) {
+            qrCode.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <p style="margin-bottom: 10px; font-size: 1.1em; font-weight: bold;">通常の支払い</p>
+                    <p style="font-size: 0.9em; color: #666;">
+                        PayPayアプリで支払いを完了してください<br>
+                        支払い完了後、「支払い完了」ボタンをクリック
+                    </p>
+                </div>
+            `;
         }
-    }
 
-    // 決済完了を監視（ポーリング）
-    monitorPayment(orderId) {
-        let attempts = 0;
-        const maxAttempts = 60; // 最大5分間（5秒間隔）
-
-        const checkInterval = setInterval(async () => {
-            attempts++;
-
-            try {
-                const status = await apiCall(`/paypay/status/${orderId}`);
-                
-                if (status.status === 'COMPLETED' || status.status === 'APPROVED') {
-                    clearInterval(checkInterval);
-                    // 決済完了を処理
-                    await this.completePayment();
-                } else if (status.status === 'CANCELED' || status.status === 'REJECTED') {
-                    clearInterval(checkInterval);
-                    alert('決済がキャンセルされました');
-                }
-            } catch (error) {
-                console.error('決済状況確認エラー:', error);
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                console.log('決済監視を終了しました');
-            }
-        }, 5000); // 5秒ごとに確認
-
-        // モーダルが閉じられたら監視を停止
-        const modal = document.getElementById('paypayModal');
-        if (modal) {
-            const observer = new MutationObserver(() => {
-                if (modal.style.display === 'none') {
-                    clearInterval(checkInterval);
-                }
-            });
-            observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+        // PayPayアプリを開くリンク（金額を含む）
+        if (paypayLink) {
+            paypayLink.href = `paypay://payment?amount=${amount}`;
+            paypayLink.textContent = 'PayPayで支払う';
+            paypayLink.style.display = 'inline-block';
         }
     }
 
