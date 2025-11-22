@@ -7,8 +7,15 @@ const config = {
     channelSecret: process.env.LINE_CHANNEL_SECRET || ''
 };
 
-// LINEクライアント
-const client = new line.Client(config);
+// LINEクライアント（環境変数が設定されている場合のみ作成）
+let client = null;
+if (process.env.LINE_CHANNEL_ACCESS_TOKEN && process.env.LINE_CHANNEL_ACCESS_TOKEN !== '') {
+    try {
+        client = new line.Client(config);
+    } catch (error) {
+        console.warn('LINEクライアントの作成に失敗しました:', error.message);
+    }
+}
 
 // LINEユーザーIDでユーザーを取得
 async function getUserByLineId(lineUserId) {
@@ -47,6 +54,9 @@ async function saveLineUserId(userId, lineUserId) {
 // テキストメッセージを送信（lineUserIdを直接受け取る）
 async function sendTextMessage(lineUserId, text) {
     try {
+        if (!client) {
+            throw new Error('LINE Messaging APIが設定されていません');
+        }
         if (!lineUserId) {
             throw new Error('LINEユーザーIDが必要です');
         }
@@ -66,6 +76,9 @@ async function sendTextMessage(lineUserId, text) {
 // 支払いリンクを送信（lineUserIdを直接受け取る）
 async function sendPaymentLink(lineUserId, amount, paymentUrl) {
     try {
+        if (!client) {
+            throw new Error('LINE Messaging APIが設定されていません');
+        }
         if (!lineUserId) {
             throw new Error('LINEユーザーIDが必要です');
         }
@@ -87,6 +100,9 @@ async function sendPaymentLink(lineUserId, amount, paymentUrl) {
 // ポイントカードをFlex Messageで送信
 async function sendPointsCard(lineUserId) {
     try {
+        if (!client) {
+            throw new Error('LINE Messaging APIが設定されていません');
+        }
         // LINEユーザーIDで自動的にユーザーを作成または取得
         const db = require('./db');
         const user = await db.createOrGetUserByLineId(lineUserId);

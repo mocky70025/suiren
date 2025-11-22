@@ -15,10 +15,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// LINE Webhook用のミドルウェア（LINEからのリクエストのみ）
-app.use('/api/line/webhook', lineMiddleware({
-    channelSecret: process.env.LINE_CHANNEL_SECRET || ''
-}));
+// LINE Webhook用のミドルウェア（LINEからのリクエストのみ、環境変数が設定されている場合のみ）
+if (process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_SECRET !== '') {
+    app.use('/api/line/webhook', lineMiddleware({
+        channelSecret: process.env.LINE_CHANNEL_SECRET
+    }));
+}
 
 // フロントエンドを配信（本番環境用）
 if (process.env.NODE_ENV === 'production') {
