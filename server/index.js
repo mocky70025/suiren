@@ -255,6 +255,27 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
+// 売り手のPayPay IDを取得（PayPayリンク生成用）
+app.get('/api/seller/paypay-id', async (req, res) => {
+    try {
+        // PayPay IDが設定されている最初のユーザーを売り手として取得
+        const users = await db.getAllUsers();
+        const seller = users.find(u => u.paypay_id && u.paypay_id.trim() !== '');
+        
+        if (!seller) {
+            return res.status(404).json({ error: '売り手のPayPay IDが設定されていません' });
+        }
+        
+        res.json({ 
+            success: true, 
+            paypayId: seller.paypay_id,
+            sellerName: seller.username 
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 売り手の受け取り金額取得
 app.get('/api/admin/sellers/:sellerId/earnings', async (req, res) => {
     try {
@@ -572,34 +593,6 @@ app.get('/api/line/richmenu/list', async (req, res) => {
     }
 });
 
-// リッチメニューの状態を確認
-app.get('/api/line/richmenu/status', async (req, res) => {
-    try {
-        const list = await richMenu.getRichMenuList();
-        if (list.richmenus && list.richmenus.length > 0) {
-            res.json({ 
-                success: true, 
-                status: 'ACTIVE', 
-                count: list.richmenus.length,
-                richmenus: list.richmenus.map(m => ({
-                    richMenuId: m.richMenuId,
-                    name: m.name,
-                    size: m.size
-                }))
-            });
-        } else {
-            res.json({ 
-                success: true, 
-                status: 'INACTIVE', 
-                count: 0,
-                message: 'リッチメニューが設定されていません'
-            });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // リッチメニューを削除
 app.delete('/api/line/richmenu/:richMenuId', async (req, res) => {
     try {
@@ -657,20 +650,17 @@ async function setupRichMenu() {
         // 新しいリッチメニューを作成
         const richMenuId = await richMenu.createRichMenu();
         
-        // 画像をアップロード（必須）
+        // 画像があればアップロード（オプション）
         const imagePath = path.join(__dirname, '..', 'assets', 'richmenu_image.png');
-        try {
-            await richMenu.uploadRichMenuImage(richMenuId, imagePath);
-            console.log('リッチメニュー画像をアップロードしました');
-        } catch (error) {
-            console.error('リッチメニュー画像のアップロードに失敗しました:', error.message);
-            // 画像がない場合は、リッチメニューを削除してエラーを返す
+        if (fs.existsSync(imagePath)) {
             try {
-                await richMenu.deleteRichMenu(richMenuId);
-            } catch (deleteError) {
-                console.error('リッチメニューの削除に失敗しました:', deleteError);
+                await richMenu.uploadRichMenuImage(richMenuId, imagePath);
+                console.log('リッチメニュー画像をアップロードしました');
+            } catch (error) {
+                console.warn('リッチメニュー画像のアップロードに失敗しました（画像なしで続行）:', error.message);
             }
-            throw new Error('リッチメニューの設定に失敗しました。画像が必要です。詳細: ' + error.message);
+        } else {
+            console.log('リッチメニュー画像が見つかりません（画像なしで続行）');
         }
         
         // デフォルトに設定

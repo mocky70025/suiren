@@ -38,6 +38,13 @@ class AuthManager {
         const userId = urlParams.get('userId');
         const username = urlParams.get('username');
         const lineUserId = urlParams.get('line_user_id');
+        const action = urlParams.get('action');
+        
+        // action=paymentの場合はPayPayリンク生成ページを表示
+        if (action === 'payment') {
+            this.showPaymentLinkPage();
+            return;
+        }
         
         if (lineLoginSuccess === 'true' && userId && username) {
             // LINEログイン成功
@@ -69,6 +76,16 @@ class AuthManager {
 
         // イベントリスナー設定
         this.setupEventListeners();
+    }
+    
+    // PayPayリンク生成ページを表示
+    showPaymentLinkPage() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainScreen').style.display = 'none';
+        const paymentLinkPage = document.getElementById('paymentLinkPage');
+        if (paymentLinkPage) {
+            paymentLinkPage.style.display = 'block';
+        }
     }
     
     // LINEユーザーIDで自動ログイン
@@ -521,6 +538,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         amountInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('payButton').click();
+            }
+        });
+    }
+
+    // PayPayリンク生成機能
+    const generateLinkButton = document.getElementById('generateLinkButton');
+    const linkAmountInput = document.getElementById('linkAmount');
+    const copyLinkButton = document.getElementById('copyLinkButton');
+    const generatedLinkInput = document.getElementById('generatedLink');
+    const openPayPayLink = document.getElementById('openPayPayLink');
+    
+    if (generateLinkButton) {
+        generateLinkButton.addEventListener('click', async () => {
+            const amount = parseInt(linkAmountInput.value);
+            
+            if (!amount || amount <= 0) {
+                alert('正しい金額を入力してください');
+                return;
+            }
+            
+            try {
+                // 売り手のPayPay IDを取得
+                const sellerInfo = await apiCall('/seller/paypay-id');
+                const paypayId = sellerInfo.paypayId;
+                
+                // PayPay送金リンクを生成
+                // PayPay IDの形式に応じてリンクを生成
+                let paypayLink;
+                if (paypayId.startsWith('@')) {
+                    // PayPay ID形式（@で始まる）
+                    paypayLink = `paypay://send?id=${paypayId.substring(1)}&amount=${amount}`;
+                } else if (/^\d+-\d+-\w+$/.test(paypayId)) {
+                    // PayPay ID形式（ハイフン区切り）
+                    paypayLink = `paypay://send?id=${paypayId}&amount=${amount}`;
+                } else if (/^0\d{9,10}$/.test(paypayId)) {
+                    // 電話番号形式
+                    paypayLink = `paypay://send?phone=${paypayId}&amount=${amount}`;
+                } else {
+                    // その他の形式（PayPay IDとして扱う）
+                    paypayLink = `paypay://send?id=${paypayId}&amount=${amount}`;
+                }
+                
+                // リンクを表示
+                if (generatedLinkInput) {
+                    generatedLinkInput.value = paypayLink;
+                }
+                if (openPayPayLink) {
+                    openPayPayLink.href = paypayLink;
+                }
+                
+                const linkResult = document.getElementById('linkResult');
+                if (linkResult) {
+                    linkResult.style.display = 'block';
+                }
+            } catch (error) {
+                alert('PayPay IDの取得に失敗しました: ' + error.message);
+                console.error(error);
+            }
+        });
+    }
+    
+    if (copyLinkButton && generatedLinkInput) {
+        copyLinkButton.addEventListener('click', () => {
+            generatedLinkInput.select();
+            document.execCommand('copy');
+            alert('リンクをコピーしました！\nLINE公式アカウントのチャットに貼り付けてください。');
+        });
+    }
+    
+    if (linkAmountInput) {
+        linkAmountInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateLinkButton.click();
             }
         });
     }
