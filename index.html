@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>すいれん - 支払いシステム</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>すいれん</h1>
+            <p class="subtitle">学校内転売 支払いシステム</p>
+        </header>
+
+        <main>
+            <!-- ログイン画面 -->
+            <div id="loginScreen" class="login-screen">
+                <section class="login-section">
+                    <h2>ログイン</h2>
+                    <div class="login-form">
+                        <label for="loginUsername">ユーザー名</label>
+                        <input type="text" id="loginUsername" placeholder="ユーザー名を入力" required>
+                        
+                        <label for="loginPassword">パスワード</label>
+                        <input type="password" id="loginPassword" placeholder="パスワードを入力" required>
+                        
+                        <button id="loginButton" class="login-button">ログイン</button>
+                        <button id="showRegisterButton" class="register-link-button">新規登録</button>
+                    </div>
+                    <div id="loginError" class="error-message" style="display: none;"></div>
+                </section>
+
+                <section class="register-section" style="display: none;">
+                    <h2>新規登録</h2>
+                    <div class="register-form">
+                        <label for="registerUsername">ユーザー名</label>
+                        <input type="text" id="registerUsername" placeholder="ユーザー名を入力" required>
+                        
+                        <label for="registerPassword">パスワード</label>
+                        <input type="password" id="registerPassword" placeholder="パスワードを入力" required>
+                        
+                        <label for="registerPasswordConfirm">パスワード（確認）</label>
+                        <input type="password" id="registerPasswordConfirm" placeholder="パスワードを再入力" required>
+                        
+                        <button id="registerButton" class="register-button">登録</button>
+                        <button id="showLoginButton" class="login-link-button">ログインに戻る</button>
+                    </div>
+                    <div id="registerError" class="error-message" style="display: none;"></div>
+                </section>
+            </div>
+
+            <!-- メイン画面（ログイン後） -->
+            <div id="mainScreen" style="display: none;">
+                <!-- ユーザー情報表示 -->
+                <section class="user-info-section">
+                    <div class="user-info">
+                        <span id="currentUsername"></span>
+                        <button id="logoutButton" class="logout-button">ログアウト</button>
+                    </div>
+                </section>
+
+            <!-- ポイントカード表示セクション -->
+            <section class="points-section">
+                <div class="points-card">
+                    <h2>あなたのポイントカード</h2>
+                    <div class="points-display">
+                        <div class="points-value">
+                            <span class="points-amount" id="totalPoints">0</span>
+                            <span class="points-unit">円</span>
+                        </div>
+                        <p class="points-label">累計支払い金額</p>
+                    </div>
+                    <div class="points-history">
+                        <h3>支払い履歴</h3>
+                        <ul id="paymentHistory" class="history-list">
+                            <li class="no-history">まだ支払い履歴がありません</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 支払いセクション -->
+            <section class="payment-section">
+                <h2>支払い</h2>
+                <div class="payment-form">
+                    <label for="paymentAmount">支払い金額（円）</label>
+                    <input type="number" id="paymentAmount" min="1" placeholder="金額を入力" required>
+                    
+                    <button id="payButton" class="pay-button">
+                        PayPayで支払う
+                    </button>
+                </div>
+
+                <!-- PayPay誘導モーダル -->
+                <div id="paypayModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h2>PayPayで支払い</h2>
+                        <div class="paypay-info">
+                            <p class="amount-display">支払い金額: <span id="modalAmount">0</span>円</p>
+                            <div class="paypay-qr">
+                                <p class="qr-instruction">以下のPayPayアプリでスキャンするか、リンクをタップしてください</p>
+                                <div class="qr-placeholder" id="qrCode">
+                                    <p>QRコードを表示</p>
+                                </div>
+                                <a href="#" id="paypayLink" class="paypay-link" target="_blank">
+                                    PayPayアプリで開く
+                                </a>
+                            </div>
+                            <div class="payment-actions">
+                                <button id="confirmPayment" class="confirm-button">
+                                    支払い完了
+                                </button>
+                                <button id="cancelPayment" class="cancel-button">
+                                    キャンセル
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 売り手用QRコード生成セクション -->
+            <section class="seller-section">
+                <h2>売り手用 - QRコード生成</h2>
+                <div class="seller-form">
+                    <label for="sellerAmount">受け取る金額（円）</label>
+                    <input type="number" id="sellerAmount" min="1" placeholder="金額を入力" required>
+                    
+                    <button id="generateQRButton" class="generate-button">
+                        QRコードを生成
+                    </button>
+                </div>
+
+                <!-- QRコード表示エリア -->
+                <div id="qrDisplayArea" class="qr-display-area" style="display: none;">
+                    <div class="qr-container">
+                        <canvas id="qrCanvas"></canvas>
+                        <p class="qr-amount-text">金額: <span id="qrAmountText">0</span>円</p>
+                    </div>
+                    <div class="qr-actions">
+                        <button id="printQRButton" class="print-button">
+                            印刷する
+                        </button>
+                        <button id="downloadQRButton" class="download-button">
+                            画像をダウンロード
+                        </button>
+                        <button id="closeQRButton" class="close-qr-button">
+                            閉じる
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

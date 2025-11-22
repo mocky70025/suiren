@@ -1,0 +1,652 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* ログイン画面 */
+.login-screen {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-section,
+.register-section {
+    text-align: center;
+}
+
+.login-section h2,
+.register-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.login-form,
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.login-form label,
+.register-form label {
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+}
+
+.login-form input,
+.register-form input {
+    padding: 15px;
+    font-size: 1em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.login-form input:focus,
+.register-form input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.login-button,
+.register-button {
+    padding: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+}
+
+.login-button:hover,
+.register-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.register-link-button,
+.login-link-button {
+    padding: 10px;
+    font-size: 0.9em;
+    color: #667eea;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-top: 10px;
+}
+
+.register-link-button:hover,
+.login-link-button:hover {
+    color: #764ba2;
+}
+
+.error-message {
+    margin-top: 15px;
+    padding: 10px;
+    background: #ffebee;
+    color: #c62828;
+    border-radius: 8px;
+    font-size: 0.9em;
+}
+
+/* ユーザー情報セクション */
+.user-info-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.user-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-info span {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.logout-button {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border: 2px solid white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+.logout-button:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* ポイントカードセクション */
+.points-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.points-card h2 {
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.points-display {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.points-value {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.points-amount {
+    font-size: 3.5em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.points-unit {
+    font-size: 1.5em;
+    opacity: 0.9;
+}
+
+.points-label {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.points-history {
+    margin-top: 20px;
+}
+
+.points-history h3 {
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.history-list {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-list li {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-list li.no-history {
+    text-align: center;
+    opacity: 0.7;
+    justify-content: center;
+}
+
+.history-date {
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.history-amount {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* 支払いセクション */
+.payment-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.payment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.payment-form label {
+    font-weight: 600;
+    color: #555;
+}
+
+.payment-form input {
+    padding: 15px;
+    font-size: 1.1em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.payment-form input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.pay-button {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pay-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.pay-button:active {
+    transform: translateY(0);
+}
+
+/* モーダル */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.paypay-info {
+    text-align: center;
+}
+
+.amount-display {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.amount-display span {
+    color: #667eea;
+    font-size: 1.2em;
+}
+
+.qr-instruction {
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.qr-placeholder {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 20px;
+    background: #f5f5f5;
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}
+
+.paypay-link {
+    display: inline-block;
+    padding: 15px 30px;
+    background: #ff6b6b;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 20px;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.paypay-link:hover {
+    background: #ff5252;
+    transform: translateY(-2px);
+}
+
+.payment-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.confirm-button {
+    flex: 1;
+    padding: 15px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.confirm-button:hover {
+    background: #45a049;
+}
+
+.cancel-button {
+    flex: 1;
+    padding: 15px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.cancel-button:hover {
+    background: #da190b;
+}
+
+/* 売り手用セクション */
+.seller-section {
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+}
+
+.seller-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.seller-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.seller-form label {
+    font-weight: 600;
+    color: #555;
+}
+
+.seller-form input {
+    padding: 15px;
+    font-size: 1.1em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.seller-form input:focus {
+    outline: none;
+    border-color: #84fab0;
+}
+
+.generate-button {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+    border: 2px solid white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.generate-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(132, 250, 176, 0.4);
+}
+
+.qr-display-area {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.qr-container {
+    margin-bottom: 20px;
+}
+
+#qrCanvas {
+    max-width: 100%;
+    height: auto;
+    border: 3px solid #84fab0;
+    border-radius: 10px;
+    padding: 10px;
+    background: white;
+}
+
+.qr-amount-text {
+    margin-top: 15px;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #333;
+}
+
+.qr-amount-text span {
+    color: #84fab0;
+    font-size: 1.2em;
+}
+
+.qr-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.print-button,
+.download-button,
+.close-qr-button {
+    padding: 12px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.print-button {
+    background: #2196F3;
+    color: white;
+}
+
+.print-button:hover {
+    background: #1976D2;
+    transform: translateY(-2px);
+}
+
+.download-button {
+    background: #4CAF50;
+    color: white;
+}
+
+.download-button:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.close-qr-button {
+    background: #757575;
+    color: white;
+}
+
+.close-qr-button:hover {
+    background: #616161;
+    transform: translateY(-2px);
+}
+
+/* 印刷用スタイル */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    
+    .qr-display-area,
+    .qr-display-area * {
+        visibility: visible;
+    }
+    
+    .qr-display-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    
+    .qr-actions {
+        display: none;
+    }
+}
+
+/* 管理セクション */
+.admin-section {
+    text-align: center;
+}
+
+.reset-button {
+    padding: 10px 20px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.reset-button:hover {
+    background: #f57c00;
+}
+
+/* レスポンシブ */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 2em;
+    }
+
+    .points-amount {
+        font-size: 2.5em;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .qr-placeholder {
+        width: 200px;
+        height: 200px;
+    }
+}
+
