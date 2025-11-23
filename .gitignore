@@ -3,6 +3,8 @@ server/node_modules/
 server/data/
 *.db
 .env
+uploads/
+node_modules/
 .DS_Store
 LINE設定情報.md
 

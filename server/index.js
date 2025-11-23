@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
+const OpenAI = require('openai');
 const db = require('./db');
 const paypay = require('./paypay');
 const line = require('./line');
@@ -14,6 +17,25 @@ const PORT = process.env.PORT || 3000;
 // ミドルウェア
 app.use(cors());
 app.use(bodyParser.json());
+
+// 画像アップロード用の設定
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB制限
+});
+
+// アップロードディレクトリが存在しない場合は作成
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+
+// OpenAIクライアントの初期化
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+    });
+}
 
 // LINE Webhook用のミドルウェア（LINEからのリクエストのみ、環境変数が設定されている場合のみ）
 if (process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_SECRET !== '') {

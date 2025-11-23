@@ -49,11 +49,41 @@
 
                 <!-- ポイント付与ページ -->
                 <div id="pointsPage" style="display: none;">
-                    <section class="pending-receipts-section">
+                    <!-- PayPayスクリーンショット解析セクション -->
+                    <section class="screenshot-analysis-section">
                         <div class="page-header">
                             <button id="backToMainButton" class="back-button">← メインメニューに戻る</button>
-                            <h2>未処理の受け取り記録</h2>
+                            <h2>PayPay取引履歴から自動ポイント付与</h2>
                         </div>
+                        <div class="screenshot-upload-area">
+                            <h3>📸 PayPay取引履歴のスクリーンショットをアップロード</h3>
+                            <p class="upload-instruction">
+                                PayPayアプリで「取引履歴」→「絞り込み」→「入金・受け取りのみ」を表示し、スクリーンショットを撮影してください。
+                            </p>
+                            <div class="file-upload-container">
+                                <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
+                                <button id="selectScreenshotButton" class="upload-button">
+                                    📷 スクリーンショットを選択
+                                </button>
+                                <span id="fileName" class="file-name"></span>
+                            </div>
+                            <div id="imagePreview" class="image-preview" style="display: none;">
+                                <img id="previewImage" src="" alt="プレビュー">
+                                <button id="removeImageButton" class="remove-button">❌ 削除</button>
+                            </div>
+                            <button id="analyzeButton" class="analyze-button" style="display: none;">
+                                🤖 AIで解析してポイントを付与
+                            </button>
+                            <div id="analysisResult" class="analysis-result" style="display: none;">
+                                <h4>解析結果</h4>
+                                <div id="analysisContent"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 未処理の受け取り記録セクション -->
+                    <section class="pending-receipts-section">
+                        <h2>未処理の受け取り記録（手動処理）</h2>
                         <div id="pendingReceiptsArea">
                             <p class="loading-text">読み込み中...</p>
                         </div>

@@ -326,4 +326,192 @@ document.addEventListener('DOMContentLoaded', () => {
     if (backToMainButton2) {
         backToMainButton2.addEventListener('click', showMainMenu);
     }
+
+    // PayPayスクリーンショット解析機能
+    const screenshotInput = document.getElementById('screenshotInput');
+    const selectScreenshotButton = document.getElementById('selectScreenshotButton');
+    const analyzeButton = document.getElementById('analyzeButton');
+    const removeImageButton = document.getElementById('removeImageButton');
+    let selectedFile = null;
+
+    if (selectScreenshotButton && screenshotInput) {
+        selectScreenshotButton.addEventListener('click', () => {
+            screenshotInput.click();
+        });
+
+        screenshotInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const fileName = document.getElementById('fileName');
+                if (fileName) {
+                    fileName.textContent = file.name;
+                }
+
+                // プレビューを表示
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewImage = document.getElementById('previewImage');
+                    const imagePreview = document.getElementById('imagePreview');
+                    if (previewImage && imagePreview) {
+                        previewImage.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        analyzeButton.style.display = 'block';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (removeImageButton) {
+        removeImageButton.addEventListener('click', () => {
+            selectedFile = null;
+            screenshotInput.value = '';
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('analyzeButton').style.display = 'none';
+            document.getElementById('analysisResult').style.display = 'none';
+        });
+    }
+
+    if (analyzeButton) {
+        analyzeButton.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('画像を選択してください');
+                return;
+            }
+
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = '解析中...';
+
+            try {
+                const formData = new FormData();
+                formData.append('screenshot', selectedFile);
+
+                const response = await fetch(`${API_BASE}/admin/analyze-paypay-screenshot`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '解析に失敗しました');
+                }
+
+                // 解析結果を表示
+                displayAnalysisResult(data);
+
+            } catch (error) {
+                alert('解析エラー: ' + error.message);
+                console.error(error);
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = '🤖 AIで解析してポイントを付与';
+            }
+        });
+    }
 });
+
+// 解析結果を表示
+function displayAnalysisResult(data) {
+    const analysisResult = document.getElementById('analysisResult');
+    const analysisContent = document.getElementById('analysisContent');
+
+    if (!analysisResult || !analysisContent) return;
+
+    let html = `<p class="analysis-summary">${data.message}</p>`;
+    html += '<div class="transactions-list">';
+
+    data.transactions.forEach((transaction, index) => {
+        const matched = transaction.matchedUser;
+        html += `
+            <div class="transaction-item ${matched ? 'matched' : 'unmatched'}">
+                <div class="transaction-info">
+                    <p><strong>金額:</strong> ${transaction.amount.toLocaleString()}円</p>
+                    ${transaction.sender_name ? `<p><strong>送金者:</strong> ${transaction.sender_name}</p>` : ''}
+                    ${transaction.date ? `<p><strong>日時:</strong> ${transaction.date}</p>` : ''}
+                    ${transaction.memo ? `<p><strong>メモ:</strong> ${transaction.memo}</p>` : ''}
+                </div>
+                <div class="match-info">
+                    ${matched ? `
+                        <p class="matched-user">✅ マッチ: ${matched.username}</p>
+                        <label>
+                            <input type="checkbox" class="apply-checkbox" data-index="${index}" checked>
+                            ポイントを付与する
+                        </label>
+                    ` : `
+                        <p class="unmatched-user">❌ マッチするユーザーが見つかりません</p>
+                    `}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    html += '<button id="applyPointsButton" class="apply-points-button">選択した取引にポイントを付与</button>';
+
+    analysisContent.innerHTML = html;
+    analysisResult.style.display = 'block';
+
+    // ポイント付与ボタン
+    const applyPointsButton = document.getElementById('applyPointsButton');
+    if (applyPointsButton) {
+        applyPointsButton.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.apply-checkbox:checked');
+            const selectedTransactions = Array.from(checkboxes).map(cb => {
+                const index = parseInt(cb.dataset.index);
+                return data.transactions[index];
+            });
+
+            if (selectedTransactions.length === 0) {
+                alert('ポイントを付与する取引を選択してください');
+                return;
+            }
+
+            if (!confirm(`${selectedTransactions.length}件の取引にポイントを付与しますか？`)) {
+                return;
+            }
+
+            applyPointsButton.disabled = true;
+            applyPointsButton.textContent = '処理中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/apply-points-from-analysis`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transactions: selectedTransactions })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'ポイント付与に失敗しました');
+                }
+
+                let message = `✅ ${result.summary.success}件のポイント付与が完了しました\n`;
+                if (result.summary.failed > 0) {
+                    message += `❌ ${result.summary.failed}件の処理に失敗しました`;
+                }
+
+                alert(message);
+                
+                // 画面をリセット
+                selectedFile = null;
+                document.getElementById('screenshotInput').value = '';
+                document.getElementById('fileName').textContent = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('analyzeButton').style.display = 'none';
+                document.getElementById('analysisResult').style.display = 'none';
+
+            } catch (error) {
+                alert('ポイント付与エラー: ' + error.message);
+                console.error(error);
+            } finally {
+                applyPointsButton.disabled = false;
+                applyPointsButton.textContent = '選択した取引にポイントを付与';
+            }
+        });
+    }
+}
