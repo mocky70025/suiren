@@ -55,28 +55,53 @@
                             <button id="backToMainButton" class="back-button">← メインメニューに戻る</button>
                             <h2>PayPay取引履歴から自動ポイント付与</h2>
                         </div>
-                        <div class="screenshot-upload-area">
-                            <h3>📸 PayPay取引履歴のスクリーンショットをアップロード</h3>
-                            <p class="upload-instruction">
-                                PayPayアプリで「取引履歴」→「絞り込み」→「入金・受け取りのみ」を表示し、スクリーンショットを撮影してください。
-                            </p>
-                            <div class="file-upload-container">
-                                <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
-                                <button id="selectScreenshotButton" class="upload-button">
-                                    📷 スクリーンショットを選択
+                        <div class="chatgpt-instruction-area">
+                            <h3>📸 ChatGPTで解析した結果を入力</h3>
+                            <div class="instruction-steps">
+                                <div class="step">
+                                    <p class="step-number">1</p>
+                                    <p class="step-text">PayPayアプリで「取引履歴」→「絞り込み」→「入金・受け取りのみ」を表示し、スクリーンショットを撮影</p>
+                                </div>
+                                <div class="step">
+                                    <p class="step-number">2</p>
+                                    <p class="step-text">ブラウザのChatGPTにスクリーンショットをアップロード</p>
+                                </div>
+                                <div class="step">
+                                    <p class="step-number">3</p>
+                                    <p class="step-text">以下のプロンプトをChatGPTに送信：</p>
+                                    <div class="prompt-box">
+                                        <pre id="chatgptPrompt">このPayPayの取引履歴（入金・受け取りのみ）のスクリーンショットから、以下のJSON形式で取引情報を抽出してください：
+
+{
+  "transactions": [
+    {
+      "amount": 金額（数値のみ）,
+      "sender_name": "送金者の名前（表示されている場合）",
+      "date": "日時（表示されている場合）",
+      "memo": "メモ（表示されている場合）"
+    }
+  ]
+}
+
+取引が複数ある場合は、すべての取引を配列に含めてください。金額は必ず数値で返してください（例: 1000）。</pre>
+                                        <button id="copyPromptButton" class="copy-prompt-button">📋 プロンプトをコピー</button>
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <p class="step-number">4</p>
+                                    <p class="step-text">ChatGPTが出力したJSONを下のテキストエリアに貼り付けて「ポイントを付与」をクリック</p>
+                                </div>
+                            </div>
+                            <div class="json-input-area">
+                                <label for="chatgptJsonInput">ChatGPTが出力したJSON:</label>
+                                <textarea id="chatgptJsonInput" class="json-input" placeholder='{"transactions": [{"amount": 1000, "sender_name": "田中太郎"}]}'></textarea>
+                                <button id="applyPointsFromJsonButton" class="apply-points-button">
+                                    ✅ ポイントを付与
                                 </button>
-                                <span id="fileName" class="file-name"></span>
                             </div>
-                            <div id="imagePreview" class="image-preview" style="display: none;">
-                                <img id="previewImage" src="" alt="プレビュー">
-                                <button id="removeImageButton" class="remove-button">❌ 削除</button>
-                            </div>
-                            <button id="analyzeButton" class="analyze-button" style="display: none;">
-                                🤖 AIで解析してポイントを付与
-                            </button>
-                            <div id="analysisResult" class="analysis-result" style="display: none;">
-                                <h4>解析結果</h4>
-                                <div id="analysisContent"></div>
+                            <div id="jsonResult" class="json-result" style="display: none;">
+                                <h4>処理結果</h4>
+                                <div id="jsonResultContent"></div>
                             </div>
                         </div>
                     </section>

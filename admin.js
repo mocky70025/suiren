@@ -327,104 +327,107 @@ document.addEventListener('DOMContentLoaded', () => {
         backToMainButton2.addEventListener('click', showMainMenu);
     }
 
-    // PayPayスクリーンショット解析機能
-    const screenshotInput = document.getElementById('screenshotInput');
-    const selectScreenshotButton = document.getElementById('selectScreenshotButton');
-    const analyzeButton = document.getElementById('analyzeButton');
-    const removeImageButton = document.getElementById('removeImageButton');
-    let selectedFile = null;
-
-    if (selectScreenshotButton && screenshotInput) {
-        selectScreenshotButton.addEventListener('click', () => {
-            screenshotInput.click();
-        });
-
-        screenshotInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                selectedFile = file;
-                const fileName = document.getElementById('fileName');
-                if (fileName) {
-                    fileName.textContent = file.name;
-                }
-
-                // プレビューを表示
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const previewImage = document.getElementById('previewImage');
-                    const imagePreview = document.getElementById('imagePreview');
-                    if (previewImage && imagePreview) {
-                        previewImage.src = e.target.result;
-                        imagePreview.style.display = 'block';
-                        analyzeButton.style.display = 'block';
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
+    // ChatGPTプロンプトをコピー
+    const copyPromptButton = document.getElementById('copyPromptButton');
+    if (copyPromptButton) {
+        copyPromptButton.addEventListener('click', () => {
+            const promptText = document.getElementById('chatgptPrompt').textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert('プロンプトをコピーしました！');
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+            });
         });
     }
 
-    if (removeImageButton) {
-        removeImageButton.addEventListener('click', () => {
-            selectedFile = null;
-            screenshotInput.value = '';
-            document.getElementById('fileName').textContent = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('analyzeButton').style.display = 'none';
-            document.getElementById('analysisResult').style.display = 'none';
-        });
-    }
-
-    if (analyzeButton) {
-        analyzeButton.addEventListener('click', async () => {
-            if (!selectedFile) {
-                alert('画像を選択してください');
+    // ChatGPT JSONからポイントを付与
+    const applyPointsFromJsonButton = document.getElementById('applyPointsFromJsonButton');
+    const chatgptJsonInput = document.getElementById('chatgptJsonInput');
+    
+    if (applyPointsFromJsonButton && chatgptJsonInput) {
+        applyPointsFromJsonButton.addEventListener('click', async () => {
+            const jsonText = chatgptJsonInput.value.trim();
+            
+            if (!jsonText) {
+                alert('JSONを入力してください');
                 return;
             }
 
-            analyzeButton.disabled = true;
-            analyzeButton.textContent = '解析中...';
-
             try {
-                const formData = new FormData();
-                formData.append('screenshot', selectedFile);
-
-                const response = await fetch(`${API_BASE}/admin/analyze-paypay-screenshot`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || '解析に失敗しました');
+                // JSONをパース
+                let jsonData;
+                try {
+                    jsonData = JSON.parse(jsonText);
+                } catch (e) {
+                    // コードブロックがある場合は除去
+                    let cleanedJson = jsonText;
+                    if (cleanedJson.includes('```')) {
+                        cleanedJson = cleanedJson.replace(/^```json\n?/, '').replace(/```$/g, '').trim();
+                    }
+                    jsonData = JSON.parse(cleanedJson);
                 }
 
-                // 解析結果を表示
-                displayAnalysisResult(data);
+                if (!jsonData.transactions || !Array.isArray(jsonData.transactions)) {
+                    throw new Error('JSON形式が正しくありません。transactions配列が必要です。');
+                }
+
+                // 全ユーザーを取得（LINEユーザーIDで照合用）
+                const users = await fetch(`${API_BASE}/admin/users`).then(r => r.json());
+                const lineUsers = users.filter(u => u.line_user_id);
+
+                // 取引情報とLINEユーザーを照合
+                const matchedTransactions = [];
+                for (const transaction of jsonData.transactions) {
+                    if (!transaction.amount || transaction.amount <= 0) {
+                        continue;
+                    }
+
+                    // 送金者名からLINEユーザーを検索（部分一致）
+                    let matchedUser = null;
+                    if (transaction.sender_name) {
+                        matchedUser = lineUsers.find(u => 
+                            u.username.includes(transaction.sender_name) || 
+                            transaction.sender_name.includes(u.username)
+                        );
+                    }
+
+                    matchedTransactions.push({
+                        ...transaction,
+                        matchedUser: matchedUser ? {
+                            id: matchedUser.id,
+                            username: matchedUser.username,
+                            lineUserId: matchedUser.line_user_id
+                        } : null
+                    });
+                }
+
+                if (matchedTransactions.length === 0) {
+                    alert('有効な取引が見つかりませんでした');
+                    return;
+                }
+
+                // 照合結果を表示
+                displayJsonAnalysisResult(matchedTransactions);
 
             } catch (error) {
-                alert('解析エラー: ' + error.message);
+                alert('JSON解析エラー: ' + error.message);
                 console.error(error);
-            } finally {
-                analyzeButton.disabled = false;
-                analyzeButton.textContent = '🤖 AIで解析してポイントを付与';
             }
         });
     }
 });
 
-// 解析結果を表示
-function displayAnalysisResult(data) {
-    const analysisResult = document.getElementById('analysisResult');
-    const analysisContent = document.getElementById('analysisContent');
+// JSON解析結果を表示
+function displayJsonAnalysisResult(transactions) {
+    const jsonResult = document.getElementById('jsonResult');
+    const jsonResultContent = document.getElementById('jsonResultContent');
 
-    if (!analysisResult || !analysisContent) return;
+    if (!jsonResult || !jsonResultContent) return;
 
-    let html = `<p class="analysis-summary">${data.message}</p>`;
+    let html = `<p class="analysis-summary">${transactions.length}件の取引を検出しました</p>`;
     html += '<div class="transactions-list">';
 
-    data.transactions.forEach((transaction, index) => {
+    transactions.forEach((transaction, index) => {
         const matched = transaction.matchedUser;
         html += `
             <div class="transaction-item ${matched ? 'matched' : 'unmatched'}">
@@ -452,8 +455,8 @@ function displayAnalysisResult(data) {
     html += '</div>';
     html += '<button id="applyPointsButton" class="apply-points-button">選択した取引にポイントを付与</button>';
 
-    analysisContent.innerHTML = html;
-    analysisResult.style.display = 'block';
+    jsonResultContent.innerHTML = html;
+    jsonResult.style.display = 'block';
 
     // ポイント付与ボタン
     const applyPointsButton = document.getElementById('applyPointsButton');
@@ -462,7 +465,7 @@ function displayAnalysisResult(data) {
             const checkboxes = document.querySelectorAll('.apply-checkbox:checked');
             const selectedTransactions = Array.from(checkboxes).map(cb => {
                 const index = parseInt(cb.dataset.index);
-                return data.transactions[index];
+                return transactions[index];
             });
 
             if (selectedTransactions.length === 0) {
@@ -498,12 +501,8 @@ function displayAnalysisResult(data) {
                 alert(message);
                 
                 // 画面をリセット
-                selectedFile = null;
-                document.getElementById('screenshotInput').value = '';
-                document.getElementById('fileName').textContent = '';
-                document.getElementById('imagePreview').style.display = 'none';
-                document.getElementById('analyzeButton').style.display = 'none';
-                document.getElementById('analysisResult').style.display = 'none';
+                document.getElementById('chatgptJsonInput').value = '';
+                document.getElementById('jsonResult').style.display = 'none';
 
             } catch (error) {
                 alert('ポイント付与エラー: ' + error.message);
